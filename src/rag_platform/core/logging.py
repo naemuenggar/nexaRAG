@@ -5,10 +5,13 @@ import sys
 
 import structlog
 
+from rag_platform.observability.tracing import add_trace_context
+
 
 def configure_logging(level: str = "INFO", *, json: bool = True) -> None:
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
+        add_trace_context,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", utc=True),

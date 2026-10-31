@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, File, Query, Response, UploadFile, status
 
-from rag_platform.api.deps import CurrentUserDep, DocumentServiceDep
+from rag_platform.api.deps import CurrentUserDep, DocumentServiceDep, UploadRateLimit
 from rag_platform.api.schemas import (
     DocumentDetail,
     DocumentList,
@@ -51,6 +51,7 @@ def _share(share: DocumentShare, email: str) -> ShareOut:
     response_model=DocumentDetail,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Upload a PDF; parsing happens in the background",
+    dependencies=[UploadRateLimit],
 )
 async def upload_document(
     user: CurrentUserDep,

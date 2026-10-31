@@ -1,6 +1,6 @@
 """FastAPI dependencies that expose the container's resources to route handlers."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -11,6 +11,7 @@ from rag_platform.auth.tokens import decode_access_token
 from rag_platform.container import Container
 from rag_platform.core.config import Settings
 from rag_platform.core.errors import AuthenticationError
+from rag_platform.core.rate_limit import Limit
 from rag_platform.db.models import User
 from rag_platform.repositories.users import UserRepository
 from rag_platform.retrieval.dense import DenseRetriever
@@ -109,3 +110,28 @@ def get_conversation_service(
 
 
 ConversationServiceDep = Annotated[ConversationService, Depends(get_conversation_service)]
+
+
+def _client_ip(request: Request) -> str:
+    # Behind a reverse proxy, uvicorn's --proxy-headers puts the real client address here.
+    return request.client.host if request.client else "unknown"
+
+
+def per_ip(scope: str, limit: Callable[[Settings], Limit]) -> Callable[..., Awaitable[None]]:
+    async def dependency(request: Request, container: ContainerDep) -> None:
+        await container.rate_limiter.check(scope, _client_ip(request), limit(container.settings))
+
+    return dependency
+
+
+def per_user(scope: str, limit: Callable[[Settings], Limit]) -> Callable[..., Awaitable[None]]:
+    async def dependency(user: CurrentUserDep, container: ContainerDep) -> None:
+        await container.rate_limiter.check(scope, str(user.id), limit(container.settings))
+
+    return dependency
+
+
+AuthRateLimit = Depends(per_ip("auth", lambda s: Limit(s.rate_limit_auth_per_minute, 60)))
+SearchRateLimit = Depends(per_user("search", lambda s: Limit(s.rate_limit_search_per_minute, 60)))
+AskRateLimit = Depends(per_user("ask", lambda s: Limit(s.rate_limit_ask_per_minute, 60)))
+UploadRateLimit = Depends(per_user("upload", lambda s: Limit(s.rate_limit_upload_per_hour, 3600)))

@@ -23,6 +23,7 @@ class AppError(Exception):
         super().__init__(message)
         self.message = message
         self.details = details
+        self.headers: dict[str, str] | None = None
         if code is not None:
             self.code = code
 
@@ -71,6 +72,13 @@ class RateLimitedError(AppError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     code = "rate_limited"
 
+    def __init__(self, retry_after_seconds: int) -> None:
+        super().__init__(
+            "Too many requests, please slow down",
+            details={"retry_after_seconds": retry_after_seconds},
+        )
+        self.headers = {"Retry-After": str(retry_after_seconds)}
+
 
 def _request_id(request: Request) -> str | None:
     value = getattr(request.state, "request_id", None)
@@ -87,7 +95,9 @@ async def _app_error_handler(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, AppError):
         raise exc
     extra = {"details": exc.details} if exc.details is not None else {}
-    headers = {"WWW-Authenticate": "Bearer"} if isinstance(exc, AuthenticationError) else None
+    headers = (
+        {"WWW-Authenticate": "Bearer"} if isinstance(exc, AuthenticationError) else exc.headers
+    )
     return JSONResponse(
         status_code=exc.status_code,
         content=error_body(exc.code, exc.message, request, **extra),

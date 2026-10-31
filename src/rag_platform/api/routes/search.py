@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from rag_platform.api.deps import CurrentUserDep, SearchServiceDep, SettingsDep
+from rag_platform.api.deps import CurrentUserDep, SearchRateLimit, SearchServiceDep, SettingsDep
 from rag_platform.api.schemas import (
     SearchFilters,
     SearchHitOut,
@@ -24,7 +24,12 @@ def to_filter(filters: SearchFilters | None) -> DocumentFilter | None:
     )
 
 
-@router.post("", response_model=SearchResponseOut, summary="Retrieve passages from your documents")
+@router.post(
+    "",
+    response_model=SearchResponseOut,
+    summary="Retrieve passages from your documents",
+    dependencies=[SearchRateLimit],
+)
 async def search(
     body: SearchRequest, user: CurrentUserDep, service: SearchServiceDep, settings: SettingsDep
 ) -> SearchResponseOut:

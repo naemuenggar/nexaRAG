@@ -1,11 +1,12 @@
 """Application factory. Serve with ``uvicorn --factory rag_platform.main:app_factory``."""
 
 import asyncio
-from collections.abc import AsyncIterator
+import hmac
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from rag_platform import __version__
@@ -14,9 +15,11 @@ from rag_platform.api.middleware import RequestContextMiddleware
 from rag_platform.api.routes import ask, auth, conversations, documents, health, search
 from rag_platform.container import Container
 from rag_platform.core.config import Settings, get_settings
-from rag_platform.core.errors import register_error_handlers
+from rag_platform.core.errors import AuthenticationError, register_error_handlers
 from rag_platform.core.logging import configure_logging, get_logger
 from rag_platform.embeddings.base import Embedder
+from rag_platform.observability.metrics import render as render_metrics
+from rag_platform.observability.tracing import configure_tracing, instrument_app
 from rag_platform.reranking.base import Reranker
 
 # Room for multipart boundaries and part headers on top of the file itself.
@@ -27,6 +30,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     """Build the app. Tests pass their own settings/container; production uses the environment."""
     settings = settings or (container.settings if container else get_settings())
     configure_logging(settings.log_level, json=settings.log_json)
+    configure_tracing(settings)
     logger = get_logger("rag_platform")
 
     @asynccontextmanager
@@ -65,16 +69,33 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         BodySizeLimitMiddleware,
         max_body_bytes=settings.max_upload_size_bytes + MULTIPART_OVERHEAD_BYTES,
     )
-    app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(RequestContextMiddleware, hsts=settings.is_production)
     register_error_handlers(app)
 
+    if settings.metrics_enabled:
+        app.add_api_route("/metrics", _metrics_endpoint(settings), include_in_schema=False)
     app.include_router(health.router)
     app.include_router(auth.router)
     app.include_router(documents.router)
     app.include_router(search.router)
     app.include_router(ask.router)
     app.include_router(conversations.router)
+    instrument_app(app)
     return app
+
+
+def _metrics_endpoint(settings: Settings) -> Callable[[Request], Awaitable[Response]]:
+    token = settings.metrics_token.get_secret_value() if settings.metrics_token else None
+
+    async def metrics(request: Request) -> Response:
+        if token is not None:
+            supplied = request.headers.get("authorization", "")
+            if not hmac.compare_digest(supplied.encode(), f"Bearer {token}".encode()):
+                raise AuthenticationError("Not authenticated")
+        body, content_type = render_metrics()
+        return Response(body, media_type=content_type)
+
+    return metrics
 
 
 async def _warm_up(

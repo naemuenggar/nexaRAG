@@ -1,18 +1,23 @@
 from fastapi import APIRouter, status
 
-from rag_platform.api.deps import AuthServiceDep, CurrentUserDep, SettingsDep
+from rag_platform.api.deps import AuthRateLimit, AuthServiceDep, CurrentUserDep, SettingsDep
 from rag_platform.api.schemas import LoginRequest, RegisterRequest, TokenResponse, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[AuthRateLimit],
+)
 async def register(body: RegisterRequest, service: AuthServiceDep) -> UserOut:
     user = await service.register(body.email, body.password)
     return UserOut.model_validate(user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[AuthRateLimit])
 async def login(
     body: LoginRequest, service: AuthServiceDep, settings: SettingsDep
 ) -> TokenResponse:

@@ -128,6 +128,24 @@ class Settings(BaseSettings):
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
+    rate_limit_enabled: bool = True
+    # Let requests through when Redis is down (availability) instead of refusing them.
+    rate_limit_fail_open: bool = True
+    # Per client IP: brute-force protection for credentials.
+    rate_limit_auth_per_minute: int = Field(default=10, ge=1)
+    # Per user.
+    rate_limit_search_per_minute: int = Field(default=60, ge=1)
+    rate_limit_ask_per_minute: int = Field(default=20, ge=1)
+    rate_limit_upload_per_hour: int = Field(default=100, ge=1)
+
+    # OpenTelemetry. Unset endpoint = spans are created (for log correlation) but not exported.
+    # Standard OTEL_EXPORTER_OTLP_HEADERS is honoured, e.g. for Langfuse's OTLP endpoint.
+    otel_exporter_otlp_endpoint: str | None = None
+    otel_service_name: str = "enterprise-rag-platform"
+    metrics_enabled: bool = True
+    # When set, /metrics requires `Authorization: Bearer <token>`.
+    metrics_token: SecretStr | None = None
+
     @field_validator("database_url")
     @classmethod
     def _require_asyncpg(cls, value: PostgresDsn) -> PostgresDsn:
@@ -141,6 +159,8 @@ class Settings(BaseSettings):
         "llm_price_input_per_1k",
         "llm_price_output_per_1k",
         "ask_min_rerank_score",
+        "metrics_token",
+        "otel_exporter_otlp_endpoint",
         mode="before",
     )
     @classmethod

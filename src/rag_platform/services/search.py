@@ -3,7 +3,7 @@
 import asyncio
 import time
 import uuid
-from collections.abc import Sequence
+from collections.abc import Awaitable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.core.config import Settings
 from rag_platform.core.errors import NotFoundError
+from rag_platform.observability.metrics import SEARCH_LATENCY
+from rag_platform.observability.tracing import tracer
 from rag_platform.repositories.chunks import ChunkRecord, ChunkRepository
 from rag_platform.reranking.base import Reranker
 from rag_platform.retrieval.dense import DenseRetriever
@@ -25,6 +27,7 @@ from rag_platform.retrieval.sparse import BM25IndexCache, SparseRetriever
 from rag_platform.retrieval.types import RetrievalMode, ScoredChunk, SearchScope
 
 logger = structlog.stdlib.get_logger(__name__)
+_tracer = tracer(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,9 +115,16 @@ class SearchService:
         document_filter: DocumentFilter | None = None,
     ) -> SearchResponse:
         started = time.perf_counter()
-        scope = await self.resolve_scope(owner_id, document_filter)
-        hits = await self.retrieve(query, scope, mode=mode, top_k=top_k)
-        latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        with _tracer.start_as_current_span("search") as span:
+            span.set_attribute("rag.search.mode", mode.value)
+            span.set_attribute("rag.search.top_k", top_k)
+            scope = await self.resolve_scope(owner_id, document_filter)
+            span.set_attribute("rag.search.documents_in_scope", len(scope.document_ids))
+            hits = await self.retrieve(query, scope, mode=mode, top_k=top_k)
+            span.set_attribute("rag.search.hits", len(hits))
+        elapsed = time.perf_counter() - started
+        SEARCH_LATENCY.labels(mode.value).observe(elapsed)
+        latency_ms = round(elapsed * 1000, 2)
         logger.info("search", mode=mode.value, top_k=top_k, hits=len(hits), latency_ms=latency_ms)
         return SearchResponse(mode, hits, latency_ms)
 
@@ -135,8 +145,16 @@ class SearchService:
 
     async def _hybrid(self, query: str, scope: SearchScope) -> list[_Candidate]:
         n = self._settings.hybrid_candidates
+
+        async def traced(name: str, coro: Awaitable[list[ScoredChunk]]) -> list[ScoredChunk]:
+            with _tracer.start_as_current_span(f"retrieve.{name}") as span:
+                result = await coro
+                span.set_attribute("rag.retrieve.candidates", len(result))
+                return result
+
         dense, sparse = await asyncio.gather(
-            self._dense.search(query, scope, n), self._sparse.search(query, scope, n)
+            traced("dense", self._dense.search(query, scope, n)),
+            traced("bm25", self._sparse.search(query, scope, n)),
         )
         ranked = {"dense": dense, "bm25": sparse}
         fused: list[FusedChunk]
@@ -153,7 +171,10 @@ class SearchService:
         pool = await self._hydrate(scope.user_id, fused[: self._settings.rerank_candidates])
         if not pool:
             return []
-        scores = await self._reranker.score(query, [h.chunk.text for h in pool])
+        with _tracer.start_as_current_span("rerank") as span:
+            span.set_attribute("rag.rerank.model", self._reranker.model_name)
+            span.set_attribute("rag.rerank.candidates", len(pool))
+            scores = await self._reranker.score(query, [h.chunk.text for h in pool])
         # Stable sort: equal rerank scores keep their fused order.
         ordered = sorted(zip(pool, scores, strict=True), key=lambda pair: -pair[1])[:top_k]
         return [

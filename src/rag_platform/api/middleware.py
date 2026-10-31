@@ -14,6 +14,8 @@ from starlette.datastructures import MutableHeaders
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from rag_platform.observability.metrics import HTTP_LATENCY, HTTP_REQUESTS
+
 REQUEST_ID_HEADER = "x-request-id"
 # Accept a caller-supplied id only if it is short and harmless to log.
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
@@ -23,14 +25,23 @@ _SECURITY_HEADERS = {
     "x-frame-options": "DENY",
     "referrer-policy": "no-referrer",
     "cache-control": "no-store",
+    "cross-origin-opener-policy": "same-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
 }
+# The API only returns JSON: nothing may be loaded or framed. The interactive docs page loads
+# Swagger UI from a CDN, so it is exempt (and is disabled in production anyway).
+_API_CSP = "default-src 'none'; frame-ancestors 'none'"
+_DOCS_PATHS = ("/docs", "/openapi.json")
+_HSTS = "max-age=31536000; includeSubDomains"
 
 logger = structlog.stdlib.get_logger("rag_platform.access")
 
 
 class RequestContextMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
+    def __init__(self, app: ASGIApp, *, hsts: bool = False) -> None:
         self.app = app
+        # Only behind TLS (production): browsers then refuse plain HTTP for a year.
+        self.hsts = hsts
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -55,6 +66,10 @@ class RequestContextMiddleware:
                 headers[REQUEST_ID_HEADER] = request_id
                 for name, value in _SECURITY_HEADERS.items():
                     headers.setdefault(name, value)
+                if not scope["path"].startswith(_DOCS_PATHS):
+                    headers.setdefault("content-security-policy", _API_CSP)
+                if self.hsts:
+                    headers.setdefault("strict-transport-security", _HSTS)
             await send(message)
 
         try:
@@ -75,12 +90,18 @@ class RequestContextMiddleware:
             )
             await response(scope, receive, send_wrapper)
         finally:
+            duration = time.perf_counter() - started
+            # The route template ("/documents/{document_id}"), not the raw path, keeps metric
+            # labels bounded; unmatched paths (404 scans) share one label.
+            route = getattr(scope.get("route"), "path", "unmatched")
+            HTTP_REQUESTS.labels(scope["method"], route, str(status_code)).inc()
+            HTTP_LATENCY.labels(scope["method"], route).observe(duration)
             logger.info(
                 "request",
                 method=scope["method"],
                 path=scope["path"],
                 status=status_code,
-                duration_ms=round((time.perf_counter() - started) * 1000, 2),
+                duration_ms=round(duration * 1000, 2),
             )
             structlog.contextvars.clear_contextvars()
 

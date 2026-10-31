@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from rag_platform.api.deps import AskServiceDep, CurrentUserDep
+from rag_platform.api.deps import AskRateLimit, AskServiceDep, CurrentUserDep
 from rag_platform.api.routes.search import to_filter
 from rag_platform.api.schemas import AskRequest, AskResponse, CitationOut, LatencyOut, UsageOut
 
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/ask", tags=["ask"])
     "",
     response_model=AskResponse,
     summary="Answer a question from your documents, with citations",
+    dependencies=[AskRateLimit],
 )
 async def ask(body: AskRequest, user: CurrentUserDep, service: AskServiceDep) -> AskResponse:
     result = await service.ask(

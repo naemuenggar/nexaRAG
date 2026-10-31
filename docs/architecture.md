@@ -105,6 +105,9 @@ never touch SQL or clients directly; services never import FastAPI.
 | Conversations | Turns stored with the citations and usage the user saw; the last 6 messages are sent as context; retrieval uses the previous question plus the current one | Follow-ups ("and in 2023?") need context both for retrieval and for the model. Old `[n]` markers are stripped from history so they can't be confused with the new sources. A failed turn stores nothing. |
 | Evaluation corpus | Fictional documents rendered to PDF at run time, committed as JSON | Fully reproducible offline, no licensing questions, and facts a model can't know from pretraining. Real corpora can be plugged in with the same format. |
 | Answer judging | LLM-as-judge with JSON-only replies; unparseable replies counted as failures, never imputed | Faithfulness has no deterministic check. Citation correctness, refusal rate and retrieval metrics are deterministic and don't depend on the judge. |
+| Rate limiting | Fixed windows in Redis via one Lua INCR+EXPIRE script, fail-open by default | Atomic, one round trip, no per-request bookkeeping in the API. Fail-open keeps the API up during a Redis outage; `RATE_LIMIT_FAIL_OPEN=false` for stricter deployments. |
+| Tracing | OpenTelemetry SDK with optional OTLP/HTTP export; GenAI semantic-convention attributes on LLM spans; no user content in attributes | Vendor-neutral: the same spans go to Jaeger, Tempo or Langfuse. Keeping content out of spans means traces can leave the trust boundary. |
+| Metrics | `prometheus-client` with route-template labels | Standard scraping; bounded label cardinality. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -143,7 +146,8 @@ never touch SQL or clients directly; services never import FastAPI.
   actually supplied, otherwise it is dropped (and the answer refused if nothing remains).
 * **Uploads.** Size limit enforced while streaming, PDF magic bytes checked, files stored under
   generated names (never the user-supplied filename), parsing done in the worker with time limits.
-* **Rate limiting** with Redis (fixed window per user + per IP for auth endpoints).
+* **Rate limiting** with Redis: fixed window per user, per client IP for login and
+  registration, `429` + `Retry-After`.
 * **No secrets in code or images.** `.env` is git- and docker-ignored; `.env.example` holds only
   placeholders.
 
@@ -184,5 +188,5 @@ lenient towards its own answers; use a different, stronger model for judging whe
 6. Grounded LLM generation and citations (done)
 7. Conversation history and multi-user authorization (done)
 8. Evaluation and benchmarking (done; generation metrics pending an LLM)
-9. Observability, security and performance
+9. Observability, security and performance (done)
 10. Docker deployment, CI/CD and documentation

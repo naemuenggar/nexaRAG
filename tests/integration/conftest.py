@@ -89,6 +89,8 @@ def app_settings(
             "qdrant_collection": test_collection,
             "chunk_size_words": 40,
             "chunk_overlap_words": 10,
+            # Tests create many users from one client address; limits get their own test.
+            "rate_limit_enabled": False,
         }
     )
 

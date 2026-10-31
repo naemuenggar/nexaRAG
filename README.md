@@ -4,9 +4,9 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 8 of 10 (evaluation and benchmarking).** Grounded answers with citations,
-> conversations, document sharing, and a reproducible evaluation harness with measured results.
-> Observability, hardening and deployment come next. See
+> **Status: Milestone 9 of 10 (observability, security and performance).** Grounded answers
+> with citations, conversations, sharing, evaluation, rate limiting, tracing and metrics.
+> Deployment and CI/CD polish come next. See
 > [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
@@ -241,4 +241,41 @@ What this shows, and what it doesn't:
 
 `tests/integration/test_retrieval_benchmark.py` runs the same evaluation in CI and fails if
 any mode drops below a floor set slightly under these numbers.
+
+## Observability
+
+* **Logs**: JSON lines on stdout with `request_id` on every entry, plus `trace_id`/`span_id`
+  inside traced work. Request bodies, questions and answers are not logged.
+* **Traces** (OpenTelemetry): HTTP requests plus spans for `search`, `retrieve.dense`,
+  `retrieve.bm25`, `rerank`, `llm.generate` (with `gen_ai.*` model and token attributes) and
+  `ingest.document` in the worker. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export over OTLP/HTTP.
+  Span attributes carry ids, counts and timings only, never document text or questions.
+* **Langfuse**: it accepts OTLP, so no SDK is needed:
+
+  ```bash
+  OTEL_EXPORTER_OTLP_ENDPOINT=https://cloud.langfuse.com/api/public/otel
+  # base64 of "<public key>:<secret key>"
+  OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64>
+  ```
+
+* **Metrics** (Prometheus) at `GET /metrics`: request rate and latency by route template,
+  search latency by mode, LLM tokens, latency and cost by model, answer outcomes (answered or
+  refusal reason), suspicious-source count, rate-limit rejections. Set `METRICS_TOKEN` to
+  require a bearer token, or `METRICS_ENABLED=false`.
+
+## Security summary
+
+* Secrets only from the environment; the app refuses to start with a missing or short
+  `JWT_SECRET`. Passwords hashed with Argon2id; JWTs pinned to one algorithm and audience.
+* Document-level authorization in one place (`repositories/access.py`); other users'
+  documents answer 404. Covered by integration tests for every read path.
+* Uploads: size limit enforced on the streamed body (declared and actual), PDF signature check,
+  generated storage names, page limit, per-user upload rate limit.
+* Prompt injection: retrieved text is escaped data in the user message, never instructions;
+  suspicious passages are flagged; uncited answers are withheld.
+* Rate limits in Redis: login and registration per client IP (10/min), search 60/min, ask
+  20/min, uploads 100/hour per user; `429` with `Retry-After`.
+* Safe errors: one JSON envelope, no stack traces or upstream messages; validation errors
+  never echo input. Security headers on every response (CSP, nosniff, frame denial,
+  referrer and permissions policy; HSTS in production).
 

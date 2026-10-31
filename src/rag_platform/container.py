@@ -12,6 +12,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from rag_platform.core.config import Settings
+from rag_platform.core.rate_limit import RateLimiter
 from rag_platform.db.session import create_engine, create_session_factory
 from rag_platform.embeddings.base import Embedder
 from rag_platform.embeddings.sentence_transformers import create_embedder
@@ -43,6 +44,7 @@ class Container:
     bm25_cache: BM25IndexCache
     reranker: Reranker
     llm: LLMProvider | None
+    rate_limiter: RateLimiter
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
@@ -62,6 +64,11 @@ class Container:
             embedder=create_embedder(settings),
             reranker=create_reranker(settings),
             llm=create_llm(settings),
+            rate_limiter=RateLimiter(
+                redis,
+                enabled=settings.rate_limit_enabled,
+                fail_open=settings.rate_limit_fail_open,
+            ),
             bm25_cache=BM25IndexCache(
                 settings.bm25_cache_max_owners, k1=settings.bm25_k1, b=settings.bm25_b
             ),

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 import structlog
+from opentelemetry.trace import Status, StatusCode
 
 from rag_platform.core.config import Settings
 from rag_platform.core.errors import ServiceUnavailableError, UpstreamError
@@ -19,10 +20,19 @@ from rag_platform.generation.citations import parse_answer, select_snippets
 from rag_platform.generation.injection import looks_like_injection
 from rag_platform.generation.llm import ChatMessage, LLMError, LLMProvider
 from rag_platform.generation.prompts import NO_ANSWER, PromptSource, build_messages
+from rag_platform.observability.metrics import (
+    ASK_OUTCOMES,
+    LLM_COST,
+    LLM_LATENCY,
+    LLM_TOKENS,
+    SUSPICIOUS_SOURCES,
+)
+from rag_platform.observability.tracing import tracer
 from rag_platform.retrieval.types import RetrievalMode
 from rag_platform.services.search import DocumentFilter, SearchHit, SearchService
 
 logger = structlog.stdlib.get_logger(__name__)
+_tracer = tracer(__name__)
 
 
 class RefusalReason(StrEnum):
@@ -116,19 +126,36 @@ class AskService:
         ]
         suspicious = sum(s.suspicious for s in sources)
         if suspicious:
+            SUSPICIOUS_SOURCES.inc(suspicious)
             logger.warning("prompt_injection_suspected", sources=suspicious)
 
         generation_started = time.perf_counter()
-        try:
-            result = await self._llm.complete(
-                build_messages(question, sources, history),
-                max_tokens=self._settings.llm_max_tokens,
-                temperature=self._settings.llm_temperature,
-            )
-        except LLMError as exc:
-            logger.error("llm_failed", reason=str(exc))
-            raise UpstreamError("The language model is unavailable, please retry later") from exc
+        with _tracer.start_as_current_span("llm.generate") as span:
+            # OpenTelemetry GenAI semantic conventions; Langfuse renders these as a generation.
+            span.set_attribute("gen_ai.operation.name", "chat")
+            span.set_attribute("gen_ai.request.model", self._llm.model)
+            span.set_attribute("gen_ai.request.max_tokens", self._settings.llm_max_tokens)
+            span.set_attribute("gen_ai.request.temperature", self._settings.llm_temperature)
+            span.set_attribute("rag.sources", len(sources))
+            try:
+                result = await self._llm.complete(
+                    build_messages(question, sources, history),
+                    max_tokens=self._settings.llm_max_tokens,
+                    temperature=self._settings.llm_temperature,
+                )
+            except LLMError as exc:
+                span.set_status(Status(StatusCode.ERROR, "llm_error"))
+                logger.error("llm_failed", reason=str(exc))
+                raise UpstreamError(
+                    "The language model is unavailable, please retry later"
+                ) from exc
+            span.set_attribute("gen_ai.response.model", result.model)
+            span.set_attribute("gen_ai.usage.input_tokens", result.prompt_tokens)
+            span.set_attribute("gen_ai.usage.output_tokens", result.completion_tokens)
         generation_ms = _ms_since(generation_started)
+        LLM_LATENCY.labels(result.model).observe(generation_ms / 1000)
+        LLM_TOKENS.labels(result.model, "input").inc(result.prompt_tokens)
+        LLM_TOKENS.labels(result.model, "output").inc(result.completion_tokens)
         usage = Usage(
             model=result.model,
             prompt_tokens=result.prompt_tokens,
@@ -177,6 +204,9 @@ class AskService:
             for n in parsed.cited
         ]
         total_ms = _ms_since(started)
+        ASK_OUTCOMES.labels("answered").inc()
+        if usage.cost_usd is not None:
+            LLM_COST.labels(usage.model).inc(usage.cost_usd)
         logger.info(
             "ask",
             answered=True,
@@ -232,6 +262,7 @@ class AskService:
         started: float,
     ) -> AskResult:
         total_ms = _ms_since(started)
+        ASK_OUTCOMES.labels(reason.value).inc()
         logger.info("ask", answered=False, reason=reason.value, total_ms=total_ms)
         return AskResult(
             answer=NO_ANSWER,

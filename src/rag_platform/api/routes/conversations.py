@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
-from rag_platform.api.deps import ConversationServiceDep, CurrentUserDep
+from rag_platform.api.deps import AskRateLimit, ConversationServiceDep, CurrentUserDep
 from rag_platform.api.routes.search import to_filter
 from rag_platform.api.schemas import (
     ConversationCreate,
@@ -65,6 +65,7 @@ async def delete_conversation(
     "/{conversation_id}/messages",
     response_model=MessageExchange,
     summary="Ask a question in this conversation; earlier turns are used as context",
+    dependencies=[AskRateLimit],
 )
 async def send_message(
     conversation_id: uuid.UUID,

@@ -30,10 +30,12 @@ from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import ChunkPoint, QdrantVectorIndex
 from rag_platform.ingestion.chunking import ChunkingConfig, chunk_pages
 from rag_platform.ingestion.pdf import ParsedPdf, PdfParseError, parse_pdf
+from rag_platform.observability.tracing import configure_tracing, tracer
 from rag_platform.repositories.documents import IngestionWriter
 from rag_platform.repositories.jobs import JobRepository
 
 logger = structlog.stdlib.get_logger(__name__)
+_tracer = tracer(__name__)
 
 _GENERIC_FAILURE = "Processing failed due to an internal error."
 
@@ -92,7 +94,12 @@ class IngestionWorker:
         started = asyncio.get_running_loop().time()
 
         try:
-            processed = await self._process(claimed)
+            with _tracer.start_as_current_span("ingest.document") as span:
+                span.set_attribute("rag.document_id", str(claimed.document_id))
+                span.set_attribute("rag.attempt", claimed.attempt)
+                processed = await self._process(claimed)
+                span.set_attribute("rag.pages", processed.parsed.page_count)
+                span.set_attribute("rag.chunks", len(processed.chunks))
         except PdfParseError as exc:
             log.info("ingestion_rejected", reason=exc.code)
             await self._finish_failed(claimed, exc.message, retry=False)
@@ -242,6 +249,7 @@ class IngestionWorker:
 async def main() -> None:
     settings = get_settings()
     configure_logging(settings.log_level, json=settings.log_json)
+    configure_tracing(settings)
     engine = create_engine(settings)
     storage = LocalFileStorage(settings.storage_dir)
     await storage.ensure_ready()
