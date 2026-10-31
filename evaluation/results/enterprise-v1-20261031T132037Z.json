@@ -1,0 +1,2079 @@
+{
+  "dataset": "enterprise-v1",
+  "started_at": "2026-10-31T13:20:37+00:00",
+  "environment": {
+    "platform_version": "0.1.0",
+    "python": "3.12.1",
+    "machine": "Windows AMD64",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_device": "cpu",
+    "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "chunk_size_words": 300,
+    "chunk_overlap_words": 50,
+    "chunk_cross_pages": false,
+    "fusion_method": "rrf",
+    "rrf_k": 60,
+    "hybrid_candidates": 30,
+    "rerank_candidates": 20,
+    "llm_model": null
+  },
+  "ingestion": {
+    "documents": 6,
+    "pages": 20,
+    "seconds": 1.2
+  },
+  "top_k": 5,
+  "retrieval": {
+    "dense": {
+      "questions": 32,
+      "recall_at_k": 1.0,
+      "mrr": 0.9245,
+      "ndcg_at_k": 0.9435,
+      "latency_ms": {
+        "mean": 53.64,
+        "p50": 51.85,
+        "p95": 62.98
+      },
+      "recall_at_k_lexical": 1.0,
+      "recall_at_k_paraphrase": 1.0
+    },
+    "sparse": {
+      "questions": 32,
+      "recall_at_k": 0.9062,
+      "mrr": 0.7344,
+      "ndcg_at_k": 0.7777,
+      "latency_ms": {
+        "mean": 10.01,
+        "p50": 8.12,
+        "p95": 19.2
+      },
+      "recall_at_k_lexical": 1.0,
+      "recall_at_k_paraphrase": 0.85
+    },
+    "hybrid": {
+      "questions": 32,
+      "recall_at_k": 1.0,
+      "mrr": 0.8385,
+      "ndcg_at_k": 0.8798,
+      "latency_ms": {
+        "mean": 52.2,
+        "p50": 51.16,
+        "p95": 60.01
+      },
+      "recall_at_k_lexical": 1.0,
+      "recall_at_k_paraphrase": 1.0
+    },
+    "hybrid_rerank": {
+      "questions": 32,
+      "recall_at_k": 1.0,
+      "mrr": 0.9427,
+      "ndcg_at_k": 0.9572,
+      "latency_ms": {
+        "mean": 228.59,
+        "p50": 218.69,
+        "p95": 278.48
+      },
+      "recall_at_k_lexical": 1.0,
+      "recall_at_k_paraphrase": 1.0
+    }
+  },
+  "generation": null,
+  "retrieval_rows": [
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 53.44,
+      "top": [
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 53.15,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 57.44,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 62.62,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 66.74,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.25,
+      "ndcg_at_k": 0.43067655807339306,
+      "latency_ms": 62.98,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.8,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 47.85,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 49.59,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.39,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.0,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.27,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 47.47,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 47.36,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p4",
+        "employee-handbook.pdf#p1",
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 50.76,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 49.94,
+      "top": [
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 52.87,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 49.46,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3",
+        "employee-handbook.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 58.68,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 47.07,
+      "top": [
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p4",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 49.95,
+      "top": [
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.65,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "employee-handbook.pdf#p4",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 52.07,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.05,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.91,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.84,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "incident-report-INC-2291.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 62.82,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2",
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 56.09,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 60.52,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 56.02,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 61.98,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "mode": "dense",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 56.86,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "incident-report-INC-2291.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 28.68,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 11.91,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 12.25,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "employee-handbook.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 14.73,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "employee-handbook.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 16.08,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "employee-handbook.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 19.2,
+      "top": [
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 17.9,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 16.22,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "latency_ms": 9.47,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 10.1,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 7.57,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 8.15,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p1",
+        "employee-handbook.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 7.63,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 8.45,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 7.2,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "latency_ms": 7.55,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 6.86,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 8.47,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.25,
+      "ndcg_at_k": 0.43067655807339306,
+      "latency_ms": 6.65,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 8.53,
+      "top": [
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 0.0,
+      "reciprocal_rank": 0.0,
+      "ndcg_at_k": 0.0,
+      "latency_ms": 8.07,
+      "top": [
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 7.04,
+      "top": [
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 6.23,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 7.22,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 6.13,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 8.49,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "employee-handbook.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 6.46,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 8.36,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.25,
+      "ndcg_at_k": 0.43067655807339306,
+      "latency_ms": 6.62,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 8.09,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 6.12,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "mode": "sparse",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 7.95,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 50.11,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 47.5,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.2,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 54.03,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 55.06,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "employee-handbook.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 53.69,
+      "top": [
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.46,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.3,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 53.87,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.43,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 53.28,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 56.97,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 60.01,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 61.29,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 54.79,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 51.16,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p1",
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.68,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "employee-handbook.pdf#p3",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.1,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 50.86,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "employee-handbook.pdf#p1",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 45.79,
+      "top": [
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p4",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 48.67,
+      "top": [
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 48.64,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "employee-handbook.pdf#p4",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.16,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 50.68,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "employee-handbook.pdf#p1",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.11,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 59.94,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "employee-handbook.pdf#p4",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 53.61,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 53.32,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "northwind-annual-report-2024.pdf#p2",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 50.1,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 57.05,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 51.56,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "mode": "hybrid",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 49.93,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 211.1,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 212.34,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 245.81,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 225.2,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 240.21,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 278.48,
+      "top": [
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 225.58,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 225.62,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 216.18,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 205.78,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 259.55,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 215.25,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 203.55,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 206.62,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 218.12,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 215.05,
+      "top": [
+        "employee-handbook.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 318.33,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3",
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 244.18,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 219.25,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 205.06,
+      "top": [
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "employee-handbook.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 209.88,
+      "top": [
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 241.45,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 217.41,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 226.08,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 243.99,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 230.61,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 249.01,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 265.68,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 213.83,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 212.4,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 209.59,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 203.73,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    }
+  ],
+  "generation_rows": []
+}

@@ -1,0 +1,55 @@
+{
+  "description": "Six fictional enterprise documents. The facts are invented so a model cannot answer from its pretraining; every answer must come from retrieval. Each string in 'pages' becomes one PDF page.",
+  "documents": [
+    {
+      "filename": "northwind-annual-report-2024.pdf",
+      "pages": [
+        "Northwind Turbines Annual Report 2024.\nNorthwind Turbines designs and manufactures small wind turbines for farms and remote communities. The company is headquartered in Aalborg and was founded in 2009 by Mette Kjaer, who has served as chief executive officer since the founding.\nThis report covers the financial year from January to December 2024 and was approved by the board on 12 February 2025.",
+        "Financial results.\nTotal revenue for 2024 was 84.6 million euros, an increase of 18 percent compared with 71.7 million euros in 2023. Operating profit rose to 9.3 million euros. The growth came mainly from the new NT-30 turbine, which accounted for 41 percent of unit sales.\nThe board proposes a dividend of 0.45 euros per share.",
+        "People and operations.\nAt the end of 2024 Northwind employed 512 people, up from 430 a year earlier. A second assembly plant opened in Gdansk in September 2024 and can produce up to 1,200 turbines per year.\nEmployee turnover fell to 7.5 percent, the lowest level in the company's history.",
+        "Risks and outlook.\nThe main risks identified by the board are the price of steel, delays in grid connection permits, and dependence on a single supplier for rotor blades. To reduce the supplier risk, Northwind signed a second blade supply contract in November 2024.\nFor 2025 the company expects revenue between 95 and 100 million euros."
+      ]
+    },
+    {
+      "filename": "helios-hx420-datasheet.pdf",
+      "pages": [
+        "Helios HX-420 Solar Module Datasheet.\nThe HX-420 is a monocrystalline solar module with 108 half-cut cells. Its rated power is 420 watts and its module efficiency is 22.4 percent under standard test conditions.\nThe module measures 1722 by 1134 by 30 millimetres and weighs 21.5 kilograms.",
+        "Electrical and thermal characteristics.\nThe open-circuit voltage is 38.9 volts and the short-circuit current is 13.6 amperes. The temperature coefficient of power is minus 0.29 percent per degree Celsius, which means the module loses less output on hot days than older designs.\nThe maximum system voltage is 1500 volts.",
+        "Warranty and certification.\nHelios provides a 15-year product warranty and a 30-year linear power warranty guaranteeing at least 87.4 percent of rated output after 30 years.\nThe HX-420 is certified to IEC 61215 and IEC 61730 and has passed salt mist and ammonia corrosion tests for coastal and agricultural installations."
+      ]
+    },
+    {
+      "filename": "employee-handbook.pdf",
+      "pages": [
+        "Employee Handbook, version 3.2.\nThis handbook applies to all permanent and fixed-term employees of Brightline Analytics. It explains working hours, leave, remote work, expenses and information security. Questions about the handbook go to the People team at people@brightline.example.",
+        "Leave.\nFull-time employees receive 26 days of paid annual leave per calendar year, plus public holidays. Up to 5 unused days may be carried over to the following year and must be used by 31 March.\nParental leave is 20 weeks at full pay for every parent, regardless of gender.",
+        "Remote work and expenses.\nEmployees may work remotely up to three days per week, agreed with their manager. Core hours are 10:00 to 15:00.\nHome office equipment is reimbursed up to 600 euros once every three years. Travel must be booked through the company travel portal; meals during business travel are reimbursed up to 45 euros per day.",
+        "Information security.\nMulti-factor authentication is mandatory for all company accounts. Laptops must use full-disk encryption and lock automatically after 5 minutes of inactivity.\nSecurity incidents, including lost devices and suspected phishing, must be reported to security@brightline.example within one hour of discovery."
+      ]
+    },
+    {
+      "filename": "incident-report-INC-2291.pdf",
+      "pages": [
+        "Incident Report INC-2291.\nOn 14 March 2024 at 09:12 UTC the customer payments API of Brightline Analytics began rejecting all requests. Service was restored at 09:59 UTC, an outage of 47 minutes. Approximately 18,000 payment attempts failed during this window.",
+        "Root cause.\nThe outage was caused by an expired TLS certificate on the internal load balancer in front of the payments service. The certificate had been issued manually two years earlier and was not covered by the automated renewal job.\nMonitoring detected the failures after four minutes, but the alert was routed to a team channel that was not watched outside business hours.",
+        "Remediation.\nAll certificates are now issued and renewed automatically by the platform team, and certificates expiring within 21 days raise a high-priority alert. Payments alerts now page the on-call engineer directly.\nThe incident was classified as severity 1. The post-incident review was led by Tomas Lindqvist on 18 March 2024."
+      ]
+    },
+    {
+      "filename": "clinical-trial-summary-CT-88.pdf",
+      "pages": [
+        "Clinical Trial Summary CT-88.\nCT-88 was a randomised, double-blind phase II trial of veltrazine, an oral treatment for chronic migraine. The trial enrolled 240 adult participants at 11 sites between May 2022 and August 2023.",
+        "Results.\nParticipants taking 40 milligrams of veltrazine daily had on average 4.1 fewer migraine days per month after 12 weeks, compared with 1.6 fewer days in the placebo group. The difference met the primary endpoint.\nThe 20 milligram dose did not show a statistically significant benefit.",
+        "Safety.\nAdverse events were reported by 12 percent of participants on veltrazine and 9 percent on placebo. The most common adverse events were nausea and dizziness. No serious adverse events were attributed to the treatment.\nBased on these results, a phase III trial with the 40 milligram dose is planned to start in 2025."
+      ]
+    },
+    {
+      "filename": "lakeside-tram-line-4-plan.pdf",
+      "pages": [
+        "Lakeside Tram Line 4 Project Plan.\nTram line 4 will connect the central railway station with the university campus and the new Eastport district. The line will be 11.8 kilometres long with 14 stations.",
+        "Budget and timeline.\nThe approved budget is 380 million euros, of which 60 percent comes from the national infrastructure fund. Construction starts in spring 2026 and the line is scheduled to open to passengers in December 2029.\nTrams will run every 6 minutes at peak times.",
+        "Environmental measures.\nThe project will plant 900 new trees along the route and use grass track on 4 kilometres of the line to reduce noise and rainwater runoff. All trams will run on renewable electricity.\nThe city expects line 4 to carry 45,000 passengers on an average weekday by 2032."
+      ]
+    }
+  ]
+}

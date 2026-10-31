@@ -4,9 +4,9 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 7 of 10 (conversations and multi-user authorization).** Grounded answers
-> with citations, multi-turn conversations with stored history, and read-only document sharing
-> between users. Evaluation, observability and deployment come next. See
+> **Status: Milestone 8 of 10 (evaluation and benchmarking).** Grounded answers with citations,
+> conversations, document sharing, and a reproducible evaluation harness with measured results.
+> Observability, hardening and deployment come next. See
 > [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
@@ -188,3 +188,57 @@ Every error response uses one envelope, and every response carries `X-Request-ID
 ```json
 {"error": {"code": "not_found", "message": "Document not found", "request_id": "3f2a..."}}
 ```
+
+## Evaluation
+
+```bash
+docker compose up -d
+uv run python -m rag_platform.evaluation.runner                 # retrieval only
+uv run python -m rag_platform.evaluation.runner --generate      # + answers (needs LLM_* settings)
+```
+
+The runner ingests the dataset through the real pipeline (PDF build, parsing, chunking,
+embedding, Qdrant) into a throwaway database, collection and upload folder, runs every question,
+and writes `evaluation/results/<dataset>-<timestamp>.{md,json}` with per-question rows. Nothing
+is simulated; without an LLM the generation section says "not measured".
+
+**Dataset** (`evaluation/datasets/enterprise-v1`): 6 fictional documents (annual report,
+datasheet, handbook, incident report, clinical trial summary, transit plan; 20 pages), 32
+questions with reference answers and the exact file and page holding the evidence, plus 6
+questions the corpus cannot answer. The facts are invented, so a model can't answer from
+memory. Questions are tagged `lexical` (shares key terms or codes with the text) or
+`paraphrase` (asks the same thing in different words). Use your own set with
+`--dataset path/to/dir` (same two files).
+
+**Metrics.** Retrieval relevance is per page: a result counts if it comes from an expected file
+and covers an expected page. Recall@5, MRR and nDCG@5 (binary gains, duplicates of a page
+count once). Generation: answer rate on answerable questions, refusal rate on unanswerable ones,
+citation precision/recall against the expected pages (deterministic), and LLM-as-judge
+faithfulness (share of claims supported by the cited passages), relevancy and correctness vs
+the reference (0 / 0.5 / 1). Latency is wall-clock per question after one untimed warm-up;
+tokens and cost come from the provider's usage report.
+
+**Measured results** (2026-10-31, Windows laptop CPU, no GPU; `evaluation/results/enterprise-v1-20261031T132037Z.md`):
+
+| Mode | Recall@5 | MRR | nDCG@5 | Recall@5 lexical | Recall@5 paraphrase | Latency mean / p50 / p95 (ms) |
+|---|---|---|---|---|---|---|
+| dense | 1.000 | 0.924 | 0.944 | 1.000 | 1.000 | 53.6 / 51.9 / 63.0 |
+| sparse (BM25) | 0.906 | 0.734 | 0.778 | 1.000 | 0.850 | 10.0 / 8.1 / 19.2 |
+| hybrid (RRF) | 1.000 | 0.839 | 0.880 | 1.000 | 1.000 | 52.2 / 51.2 / 60.0 |
+| hybrid + rerank | 1.000 | 0.943 | 0.957 | 1.000 | 1.000 | 228.6 / 218.7 / 278.5 |
+
+What this shows, and what it doesn't:
+* BM25 is the fastest and perfect on lexical questions, but misses 15% of paraphrased ones.
+* RRF fusion recovers BM25's misses but ranks the right page lower than dense alone (MRR 0.839
+  vs 0.924): BM25 promotes keyword matches from the wrong page.
+* The cross-encoder fixes that ordering (best MRR and nDCG) at ~4x the latency.
+* The corpus is small (20 pages), so Recall@5 saturates at 1.0 for three modes; MRR and nDCG
+  are the discriminating metrics here. A larger corpus with near-duplicate documents is
+  needed to separate the modes on recall. Treat these numbers as a regression baseline, not as
+  a general claim about the methods.
+* **Generation metrics have not been measured yet**: no LLM is configured on the machine that
+  produced this run. Configure `LLM_*` and run with `--generate`.
+
+`tests/integration/test_retrieval_benchmark.py` runs the same evaluation in CI and fails if
+any mode drops below a floor set slightly under these numbers.
+

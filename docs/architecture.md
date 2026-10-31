@@ -66,7 +66,7 @@ src/rag_platform/
   reranking/           Reranker protocol + cross-encoder implementation
   generation/          LLM provider protocol (OpenAI-compatible, Anthropic), prompts,
                        prompt-injection detection, citation parsing and verification
-  evaluation/          datasets, metrics, experiment runner                   (M8)
+  evaluation/          datasets, retrieval/citation metrics, LLM judge, runner
 migrations/            Alembic, async env reading DATABASE_URL
 tests/unit|integration
 ```
@@ -103,6 +103,8 @@ never touch SQL or clients directly; services never import FastAPI.
 | Orchestration | A plain async pipeline (retrieve → check → generate → verify), not LangGraph | The flow is linear with two early exits. A graph framework would add a dependency and indirection without adding capability; it becomes worthwhile if multi-step agentic retrieval is added. |
 | Sharing | Read-only grants by owner, one row per (document, user); BM25 indexes are per user over all readable documents, with a fingerprint that hashes the exact document id set | Covers team use without roles or groups. The digest makes the cache invalidate on any share change, not just on uploads. |
 | Conversations | Turns stored with the citations and usage the user saw; the last 6 messages are sent as context; retrieval uses the previous question plus the current one | Follow-ups ("and in 2023?") need context both for retrieval and for the model. Old `[n]` markers are stripped from history so they can't be confused with the new sources. A failed turn stores nothing. |
+| Evaluation corpus | Fictional documents rendered to PDF at run time, committed as JSON | Fully reproducible offline, no licensing questions, and facts a model can't know from pretraining. Real corpora can be plugged in with the same format. |
+| Answer judging | LLM-as-judge with JSON-only replies; unparseable replies counted as failures, never imputed | Faithfulness has no deterministic check. Citation correctness, refusal rate and retrieval metrics are deterministic and don't depend on the judge. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -153,7 +155,8 @@ occupy a worker for a long time because a Python thread cannot be killed; a proc
 hard timeouts is the fix if this shows up in practice. BM25 indexes live in each API process's
 memory: very large per-user corpora (hundreds of thousands of chunks) would need a dedicated
 sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer is English-only
-(stopwords, no stemming).
+(stopwords, no stemming). The LLM judge is by default the answering model itself, which can be
+lenient towards its own answers; use a different, stronger model for judging where it matters.
 
 
 1. **Ownership model:** documents are private to the uploader unless the owner shares read access
@@ -180,6 +183,6 @@ sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer i
 5. Hybrid search and reranking (done)
 6. Grounded LLM generation and citations (done)
 7. Conversation history and multi-user authorization (done)
-8. Evaluation and benchmarking
+8. Evaluation and benchmarking (done; generation metrics pending an LLM)
 9. Observability, security and performance
 10. Docker deployment, CI/CD and documentation
