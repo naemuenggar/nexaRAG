@@ -1,0 +1,143 @@
+# Architecture
+
+This document is the design proposal for the platform. Sections marked *(planned)* describe
+later milestones; everything else exists in the code today.
+
+## 1. Requirements recap
+
+* Multi-user assistant over 100+ PDFs. Answers must be grounded in retrieved passages and cite
+  document id, filename, page number and snippet. When the evidence is insufficient the system
+  says so instead of guessing.
+* Hybrid retrieval (dense + BM25), configurable fusion, cross-encoder reranking, metadata and
+  document filters.
+* Per-user isolation: a user can never retrieve, cite or even learn the existence of another
+  user's document.
+* Measurable quality: reproducible evaluation set, retrieval and answer metrics, real numbers only.
+
+## 2. System overview
+
+```mermaid
+flowchart LR
+    client[Client] -->|JWT| api[FastAPI API]
+    api --> pg[(PostgreSQL<br/>users, documents,<br/>chunks, jobs, chats)]
+    api --> redis[(Redis<br/>rate limits, job queue)]
+    api --> qdrant[(Qdrant<br/>chunk vectors)]
+    api -->|enqueue| redis
+    worker[Ingestion worker] -->|dequeue| redis
+    worker --> store[(File storage<br/>uploaded PDFs)]
+    worker --> pg
+    worker --> qdrant
+    api --> llm[LLM provider<br/>behind interface]
+    api -. traces .-> otel[OpenTelemetry / Langfuse]
+    worker -. traces .-> otel
+```
+
+**Query path** *(planned)*: authenticate → rate-limit → resolve the caller's accessible document
+ids → dense search (Qdrant, filtered by `owner_id`/`document_id` payload) and BM25 search
+(filtered the same way) in parallel → fusion (RRF by default, weighted-score optional) →
+cross-encoder rerank top-N → evidence sufficiency check → grounded generation with numbered
+sources → citation validation → persist turn → respond.
+
+**Ingestion path** *(planned)*: upload → validate type (magic bytes, not just extension) and
+size → SHA-256 dedupe per owner → store file → `documents` row (`pending`) + `ingestion_jobs`
+row → enqueue → worker parses page by page → clean → chunk with page spans → embed → upsert
+to Qdrant and Postgres → `ready` (or `failed` with a safe error message).
+
+## 3. Code layout
+
+```
+src/rag_platform/
+  main.py              app factory, lifespan, middleware wiring
+  container.py         composition root: builds clients once, exposes them via DI
+  core/                config, logging, error types and handlers
+  api/                 HTTP only: routes, request/response schemas, dependencies, middleware
+  db/                  SQLAlchemy base, session factory, ORM models
+  infrastructure/      clients and probes for Postgres, Redis, Qdrant
+  # added in later milestones, one package per concern:
+  auth/                password hashing, JWT, current-user dependency         (M7)
+  repositories/        all SQL lives here; every query takes the caller's id  (M2+)
+  services/            use-case orchestration (upload, ask, conversations)    (M2+)
+  ingestion/           PDF parsing, cleaning, chunking, worker                (M2-M3)
+  embeddings/          embedding model interface + sentence-transformers      (M3)
+  retrieval/           dense, BM25, fusion, filters                           (M4-M5)
+  reranking/           cross-encoder interface + implementation               (M5)
+  generation/          LLM provider interface, prompts, citation handling     (M6)
+  evaluation/          datasets, metrics, experiment runner                   (M8)
+migrations/            Alembic, async env reading DATABASE_URL
+tests/unit|integration
+```
+
+Dependency rule: `api → services → repositories/retrieval/generation → infrastructure`. Routes
+never touch SQL or clients directly; services never import FastAPI.
+
+## 4. Key design decisions
+
+| Decision | Choice | Why |
+|---|---|---|
+| Dependency injection | One `Container` built in the lifespan, exposed with `Depends` | Explicit, no DI framework, tests swap parts (e.g. health probes) without monkeypatching. |
+| Config | `pydantic-settings`, secrets as `SecretStr`, no defaults for secrets | Startup fails fast on missing/weak secrets; secrets never appear in `repr` or logs. |
+| Errors | One JSON envelope `{error: {code, message, request_id}}` | Clients get a stable contract; internals (SQL, hosts, stack traces) are only logged. Validation errors report location, never the submitted value. |
+| Request tracing | Pure-ASGI middleware sets/propagates `X-Request-ID`, binds it to every log line | Works with streaming responses; caller-supplied ids are accepted only if they match `[A-Za-z0-9._-]{1,128}`. |
+| Health | `/health/live` (no dependencies) and `/health/ready` (all dependencies, per-probe timeout, 503 on failure) | Orchestrators don't restart healthy processes during a database blip; readiness exposes only the error type. |
+| Database | Async SQLAlchemy 2 + asyncpg, Alembic with deterministic constraint names | Typed models, async I/O, stable autogenerate diffs. A test asserts migrations equal the models. |
+| Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
+| Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
+| Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
+
+## 5. Data model (current migration)
+
+* `users`: id (uuid), email (unique), hashed_password, is_active, is_admin, timestamps.
+* `documents`: id, owner_id → users (cascade), filename, content_sha256, size_bytes, mime_type,
+  storage_path, page_count, status (`pending|processing|ready|failed`), error_message, timestamps.
+* `ingestion_jobs`: id, document_id → documents (cascade), status
+  (`queued|running|succeeded|failed`), attempts, error_message, started_at, finished_at, timestamps.
+
+Planned: `chunks` (document_id, page_start, page_end, ordinal, text, token_count; source for BM25
+and citation snippets) in M3, `conversations` and `messages` (with stored citations and token
+usage) in M7, optional `document_shares` if sharing is required.
+
+## 6. Security model
+
+* **Authorization lives in the data access layer.** Every repository and retrieval call takes the
+  authenticated user and filters by accessible document ids, both in SQL and as a Qdrant payload
+  filter. There is no "unfiltered search" function to call by mistake.
+* **Prompt injection.** Retrieved text is placed in a delimited, clearly labelled data section of
+  the user turn, never in the system prompt; the system prompt instructs the model to treat it as
+  untrusted quotes. Answers are post-checked: every citation must refer to a passage that was
+  actually supplied, otherwise it is dropped (and the answer refused if nothing remains).
+* **Uploads.** Size limit enforced while streaming, PDF magic bytes checked, files stored under
+  generated names (never the user-supplied filename), parsing done in the worker with time limits.
+* **Rate limiting** with Redis (fixed window per user + per IP for auth endpoints).
+* **No secrets in code or images.** `.env` is git- and docker-ignored; `.env.example` holds only
+  placeholders.
+
+## 7. Assumptions (please correct any that are wrong)
+
+1. **Ownership model:** documents are private to the uploader; admins can manage users but do
+   not read other users' documents. Sharing can be added later as an explicit ACL table.
+2. **Auth:** built-in email/password with JWT access tokens (no external IdP for now).
+3. **LLM provider:** abstracted behind an interface. The default implementation will target an
+   OpenAI-compatible HTTP API (works with OpenAI, vLLM, Ollama, LiteLLM, etc.) plus a
+   deterministic fake for tests. A real API key is needed to measure answer-quality metrics.
+4. **Embeddings / reranker defaults:** `BAAI/bge-small-en-v1.5` (384-d) and
+   `cross-encoder/ms-marco-MiniLM-L-6-v2`, chosen to run on CPU; both configurable.
+5. **Background jobs:** a small Redis-backed worker process (arq) rather than Celery, which is
+   heavier than this workload needs.
+6. **File storage:** local volume for now behind a small storage interface (S3 later).
+7. **Language:** English-first models; multilingual models (e.g. for Indonesian documents) are a
+   config change, evaluated separately.
+8. **Evaluation corpus:** a reproducible set built from openly licensed PDFs downloaded by a
+   script with pinned URLs and checksums, plus hand-written Q/A pairs with expected pages.
+
+## 8. Milestones
+
+1. Project setup and infrastructure **(this milestone)**
+2. PDF ingestion and parsing
+3. Chunking, embeddings and Qdrant indexing
+4. Dense and BM25 retrieval
+5. Hybrid search and reranking
+6. Grounded LLM generation and citations
+7. Conversation history and multi-user authorization
+8. Evaluation and benchmarking
+9. Observability, security and performance
+10. Docker deployment, CI/CD and documentation
