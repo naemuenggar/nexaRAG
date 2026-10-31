@@ -19,7 +19,9 @@ from rag_platform.infrastructure.health import (
     qdrant_probe,
     redis_probe,
 )
+from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
 from rag_platform.infrastructure.storage import LocalFileStorage
+from rag_platform.infrastructure.vector_index import QdrantVectorIndex
 
 
 @dataclass(slots=True)
@@ -30,19 +32,14 @@ class Container:
     redis: Redis
     qdrant: AsyncQdrantClient
     storage: LocalFileStorage
+    vector_index: QdrantVectorIndex
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "Container":
         engine = create_engine(settings)
         redis = Redis.from_url(str(settings.redis_url), decode_responses=True)
-        api_key = settings.qdrant_api_key
-        qdrant = AsyncQdrantClient(
-            url=settings.qdrant_url,
-            api_key=api_key.get_secret_value() if api_key is not None else None,
-            # Compatibility is not checked at construction time; /health/ready covers reachability.
-            check_compatibility=False,
-        )
+        qdrant = create_qdrant_client(settings)
         return cls(
             settings=settings,
             engine=engine,
@@ -50,6 +47,7 @@ class Container:
             redis=redis,
             qdrant=qdrant,
             storage=LocalFileStorage(settings.storage_dir),
+            vector_index=create_vector_index(qdrant, settings),
             health_probes={
                 "postgres": postgres_probe(engine),
                 "redis": redis_probe(redis),

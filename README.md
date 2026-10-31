@@ -4,8 +4,9 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 2 of 10 (PDF ingestion and parsing).** Users can register, upload PDFs
-> and read back the parsed text of each page. Retrieval and answering come next. See [docs/architecture.md](docs/architecture.md) for the full design
+> **Status: Milestone 3 of 10 (chunking, embeddings, Qdrant indexing).** Users can register and
+> upload PDFs; the worker parses them per page, splits them into chunks and indexes the chunks
+> in Qdrant. Search and answering come next. See [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
 ## Quick start (local)
@@ -18,7 +19,7 @@ docker compose up -d            # Postgres, Redis, Qdrant
 uv sync                         # creates .venv from uv.lock
 uv run alembic upgrade head     # apply database migrations
 uv run uvicorn --factory rag_platform.main:app_factory --reload
-uv run python -m rag_platform.ingestion.worker   # in a second terminal: processes uploads
+uv run python -m rag_platform.ingestion.worker   # second terminal; downloads the embedding model on first start
 ```
 
 URLs in `.env.example` use `127.0.0.1` rather than `localhost`: on Windows, `localhost` tries

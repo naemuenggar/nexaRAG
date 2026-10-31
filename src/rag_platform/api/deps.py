@@ -73,7 +73,7 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
 
 def get_document_service(session: DbSessionDep, container: ContainerDep) -> DocumentService:
-    return DocumentService(session, container.storage, container.settings)
+    return DocumentService(session, container.storage, container.vector_index, container.settings)
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

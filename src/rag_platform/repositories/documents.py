@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rag_platform.db.models import Document, DocumentPage
+from rag_platform.db.models import Chunk, Document, DocumentPage
 
 
 class DocumentRepository:
@@ -63,14 +63,16 @@ class DocumentRepository:
         return rows.scalars().all()
 
 
-class DocumentPageWriter:
-    """Used only by the ingestion worker, which acts on a job rather than on behalf of a user."""
+class IngestionWriter:
+    """Used only by the ingestion worker, which acts on a job rather than on behalf of a user.
+
+    Re-running a job must not duplicate anything, so each write replaces the previous set.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def replace_pages(self, document_id: uuid.UUID, pages: Sequence[tuple[int, str]]) -> None:
-        # Re-running a job must not duplicate pages, so the old set is replaced atomically.
         await self._session.execute(
             delete(DocumentPage).where(DocumentPage.document_id == document_id)
         )
@@ -80,4 +82,9 @@ class DocumentPageWriter:
             )
             for number, text in pages
         )
+        await self._session.flush()
+
+    async def replace_chunks(self, document_id: uuid.UUID, chunks: Sequence[Chunk]) -> None:
+        await self._session.execute(delete(Chunk).where(Chunk.document_id == document_id))
+        self._session.add_all(chunks)
         await self._session.flush()

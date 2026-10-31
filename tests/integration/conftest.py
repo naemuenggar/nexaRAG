@@ -20,9 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from rag_platform.core.config import Settings
 from rag_platform.db.session import create_session_factory
+from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
 from rag_platform.infrastructure.storage import LocalFileStorage
+from rag_platform.infrastructure.vector_index import QdrantVectorIndex
 from rag_platform.ingestion.worker import IngestionWorker
 from rag_platform.main import create_app
+from tests.fakes import HashingEmbedder
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -61,13 +64,30 @@ async def migrated_database_url(live_settings: Settings) -> AsyncIterator[str]:
         yield url
 
 
+@pytest.fixture(scope="session")
+async def test_collection(live_settings: Settings) -> AsyncIterator[str]:
+    """A Qdrant collection used only by this test session, dropped afterwards."""
+    name = f"test_chunks_{uuid.uuid4().hex[:12]}"
+    yield name
+    client = create_qdrant_client(live_settings)
+    try:
+        await client.delete_collection(name)
+    finally:
+        await client.close()
+
+
 @pytest.fixture
-def app_settings(live_settings: Settings, migrated_database_url: str, tmp_path: Path) -> Settings:
+def app_settings(
+    live_settings: Settings, migrated_database_url: str, test_collection: str, tmp_path: Path
+) -> Settings:
     return live_settings.model_copy(
         update={
             "database_url": migrated_database_url,
             "storage_dir": tmp_path / "uploads",
             "max_upload_size_mb": 2,
+            "qdrant_collection": test_collection,
+            "chunk_size_words": 40,
+            "chunk_overlap_words": 10,
         }
     )
 
@@ -86,9 +106,22 @@ async def worker_engine(app_settings: Settings) -> AsyncIterator[AsyncEngine]:
 
 
 @pytest.fixture
-def worker(app_settings: Settings, worker_engine: AsyncEngine) -> IngestionWorker:
+async def vector_index(app_settings: Settings) -> AsyncIterator[QdrantVectorIndex]:
+    client = create_qdrant_client(app_settings)
+    index = create_vector_index(client, app_settings)
+    await index.ensure_collection(HashingEmbedder().dimension)
+    yield index
+    await client.close()
+
+
+@pytest.fixture
+def worker(
+    app_settings: Settings, worker_engine: AsyncEngine, vector_index: QdrantVectorIndex
+) -> IngestionWorker:
     return IngestionWorker(
         create_session_factory(worker_engine),
         LocalFileStorage(app_settings.storage_dir),
+        HashingEmbedder(),
+        vector_index,
         app_settings,
     )

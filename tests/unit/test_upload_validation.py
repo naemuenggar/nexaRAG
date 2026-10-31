@@ -25,7 +25,7 @@ async def storage(tmp_path: Path) -> LocalFileStorage:
 
 def service(storage: LocalFileStorage, **overrides: Any) -> DocumentService:
     # stage() never touches the database, so no session is needed.
-    return DocumentService(None, storage, make_settings(**overrides))  # type: ignore[arg-type]
+    return DocumentService(None, storage, None, make_settings(**overrides))  # type: ignore[arg-type]
 
 
 def incoming_files(tmp_path: Path) -> list[Path]:

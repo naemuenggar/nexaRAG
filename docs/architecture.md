@@ -42,8 +42,9 @@ sources → citation validation → persist turn → respond.
 computed → PDF signature check → per-owner dedupe → `documents` row (`pending`) and
 `ingestion_jobs` row in one transaction → file moved into place → commit. The worker claims the
 job, parses page by page in a thread, cleans the text and stores one `document_pages` row per
-page → `ready`, or `failed` with a message safe to show the owner. *(M3 adds: chunk with page
-spans → embed → upsert to Qdrant.)*
+page, then chunks the pages, embeds the chunks and upserts them to Qdrant before storing the
+`chunks` rows → `ready`, or `failed` with a message safe to show the owner. Re-running a job
+replaces pages, chunks and vectors instead of duplicating them.
 
 ## 3. Code layout
 
@@ -59,8 +60,8 @@ src/rag_platform/
   auth/                Argon2id password hashing, JWT access tokens
   repositories/        all SQL lives here; document queries take the owner's id
   services/            use-case orchestration (auth, documents; later ask, chats)
-  ingestion/           PDF validation + parsing, text cleaning, worker (chunking in M3)
-  embeddings/          embedding model interface + sentence-transformers      (M3)
+  ingestion/           PDF validation + parsing, text cleaning, chunking, worker
+  embeddings/          Embedder protocol + Sentence Transformers implementation
   retrieval/           dense, BM25, fusion, filters                           (M4-M5)
   reranking/           cross-encoder interface + implementation               (M5)
   generation/          LLM provider interface, prompts, citation handling     (M6)
@@ -85,6 +86,10 @@ never touch SQL or clients directly; services never import FastAPI.
 | Job queue | PostgreSQL table claimed with `FOR UPDATE SKIP LOCKED`, lease + bounded retries | The job is created in the same transaction as the document, so no upload can lose its job (a Redis queue can't give that). One fewer moving part than arq/Celery; throughput needs are small. |
 | Upload size | Pure-ASGI body limit (declared and streamed bytes) plus a check while staging | Starlette spools multipart files of any size to disk; the limit stops a request before that. |
 | Auth timing | Brought forward from M7: register/login/JWT and the current-user dependency | Uploads need an owner, and a fake "user id header" would be a security hole to remove later. M7 adds conversations and the remaining authorization tests. |
+| Chunking | Sentence-aligned greedy packing by word count (default 300 words, 50 overlap), one page per chunk by default | Word counts keep chunking independent of the embedding model and deterministic. Single-page chunks make every citation point at exactly one page; `CHUNK_CROSS_PAGES=true` trades that for context across page breaks. |
+| Embeddings | `BAAI/bge-small-en-v1.5`, normalised vectors, cosine distance, query instruction prefix | Small enough for CPU, strong on retrieval benchmarks for its size. Behind an `Embedder` protocol, so a hosted model is a drop-in. |
+| Vector store layout | One collection, payload `owner_id`/`document_id` with keyword indexes; point id = chunk id | One filter restricts any search to a user's documents; the chunk row in Postgres is the source of truth for text and citations. A collection built for another vector size is refused at startup. |
+| PyTorch | CPU-only wheels from the PyTorch index via `tool.uv.sources` | The default Linux wheel ships CUDA (~2.5 GB) that the image doesn't use. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -100,8 +105,11 @@ never touch SQL or clients directly; services never import FastAPI.
 * `document_pages`: (document_id, page_number) primary key, cleaned text, char_count. Blank
   pages are kept so page numbers always match the PDF.
 
-Planned: `chunks` (document_id, page_start, page_end, ordinal, text, token_count; source for BM25
-and citation snippets) in M3, `conversations` and `messages` (with stored citations and token
+* `chunks`: id (= Qdrant point id), document_id, owner_id (denormalised for filtering),
+  ordinal (unique per document), page_start, page_end, text, word_count. Source for BM25 and
+  citation snippets.
+
+Planned: `conversations` and `messages` (with stored citations and token
 usage) in M7, optional `document_shares` if sharing is required.
 
 ## 6. Security model
@@ -146,7 +154,7 @@ hard timeouts is the fix if this shows up in practice.
 
 1. Project setup and infrastructure (done)
 2. PDF ingestion and parsing (done)
-3. Chunking, embeddings and Qdrant indexing
+3. Chunking, embeddings and Qdrant indexing (done)
 4. Dense and BM25 retrieval
 5. Hybrid search and reranking
 6. Grounded LLM generation and citations

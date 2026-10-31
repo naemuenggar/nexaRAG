@@ -7,7 +7,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator
+from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,21 @@ class Settings(BaseSettings):
 
     qdrant_url: str
     qdrant_api_key: SecretStr | None = None
+    qdrant_collection: str = Field(default="document_chunks", pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    qdrant_upsert_batch_size: int = Field(default=128, ge=1, le=2048)
+
+    # Chunk sizes are counted in whitespace-separated words, which keeps chunking independent of
+    # the embedding model. 300 words stays under the 512-token limit of BERT-style encoders.
+    chunk_size_words: int = Field(default=300, ge=20, le=2000)
+    chunk_overlap_words: int = Field(default=50, ge=0, le=1000)
+    # False keeps every chunk on a single page, so each citation points at exactly one page.
+    chunk_cross_pages: bool = False
+
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_device: str = "cpu"
+    embedding_batch_size: int = Field(default=32, ge=1, le=1024)
+    # BGE models expect this instruction on queries (not on passages).
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
 
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: str = "HS256"
@@ -70,6 +85,12 @@ class Settings(BaseSettings):
     def _blank_is_none(cls, value: object) -> object:
         # `QDRANT_API_KEY=` in an env file means "no key", not "an empty key".
         return None if value == "" else value
+
+    @model_validator(mode="after")
+    def _overlap_smaller_than_chunk(self) -> "Settings":
+        if self.chunk_overlap_words >= self.chunk_size_words:
+            raise ValueError("chunk_overlap_words must be smaller than chunk_size_words")
+        return self
 
     @field_validator("log_level")
     @classmethod

@@ -26,7 +26,7 @@ COPY --chown=app:app src ./src
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app migrations ./migrations
 # Pre-create the upload dir so a fresh named volume inherits the app user's ownership.
-RUN mkdir -p /app/data/uploads && chown -R app:app /app/data
+RUN mkdir -p /app/data/uploads /app/data/hf-cache && chown -R app:app /app/data
 
 USER app
 EXPOSE 8000

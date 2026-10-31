@@ -24,6 +24,7 @@ from rag_platform.core.errors import (
 )
 from rag_platform.db.models import Document, DocumentPage, DocumentStatus, IngestionJob
 from rag_platform.infrastructure.storage import LocalFileStorage
+from rag_platform.infrastructure.vector_index import QdrantVectorIndex
 from rag_platform.ingestion.pdf import MAGIC_SEARCH_WINDOW, looks_like_pdf
 from rag_platform.repositories.documents import DocumentRepository
 from rag_platform.repositories.jobs import JobRepository
@@ -67,9 +68,14 @@ async def iter_chunks(stream: BinaryIO, chunk_size: int = READ_CHUNK_BYTES) -> A
 
 class DocumentService:
     def __init__(
-        self, session: AsyncSession, storage: LocalFileStorage, settings: Settings
+        self,
+        session: AsyncSession,
+        storage: LocalFileStorage,
+        vector_index: QdrantVectorIndex,
+        settings: Settings,
     ) -> None:
         self._session = session
+        self._index = vector_index
         self._documents = DocumentRepository(session)
         self._jobs = JobRepository(session)
         self._storage = storage
@@ -167,9 +173,15 @@ class DocumentService:
     async def delete(self, owner_id: uuid.UUID, document_id: uuid.UUID) -> None:
         document = await self._get_owned(owner_id, document_id)
         key = document.storage_path
-        await self._documents.delete(document)  # pages and jobs cascade
+        await self._documents.delete(document)  # pages, chunks and jobs cascade
         await self._session.commit()
         await self._storage.delete(key)
+        try:
+            await self._index.delete_document(document_id)
+        except Exception:
+            # The database rows are already gone and retrieval only returns vectors whose chunk
+            # row exists, so a leftover vector is unreachable; log it for cleanup.
+            logger.exception("vector_delete_failed", document_id=str(document_id))
         logger.info("document_deleted", document_id=str(document_id))
 
     async def _get_owned(self, owner_id: uuid.UUID, document_id: uuid.UUID) -> Document:
