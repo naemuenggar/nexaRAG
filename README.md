@@ -1,150 +1,203 @@
 # Enterprise RAG Platform
 
-Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded in retrieved
-evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
-when the documents don't contain the answer.
+Multi-user knowledge assistant over your PDFs. Upload documents, ask questions, and get answers
+grounded in retrieved passages, with citations to the document, file name, page and supporting
+sentence. When the documents don't contain the answer, it says so instead of guessing.
 
-> **Status: Milestone 9 of 10 (observability, security and performance).** Grounded answers
-> with citations, conversations, sharing, evaluation, rate limiting, tracing and metrics.
-> Deployment and CI/CD polish come next. See
-> [docs/architecture.md](docs/architecture.md) for the full design
-> and the milestone plan.
+* PDF ingestion in the background: validation, page-level parsing, cleaning, chunking,
+  embeddings, Qdrant indexing
+* Retrieval: dense (Sentence Transformers), BM25, hybrid fusion (RRF or weighted),
+  cross-encoder reranking, metadata and document filters
+* Grounded answers with verified citations, prompt-injection containment, explicit refusals,
+  conversations with history
+* Users, JWT auth, document sharing with document-level authorization
+* Rate limiting, structured logs, OpenTelemetry traces (Langfuse-compatible), Prometheus metrics
+* A reproducible evaluation harness with measured results, and a CI regression gate
 
-## Quick start (local)
+## Architecture
+
+```mermaid
+flowchart LR
+    client[Client] -->|HTTPS + JWT| caddy[Caddy<br/>TLS]
+    caddy --> api[FastAPI API]
+    api --> pg[(PostgreSQL<br/>users, documents, pages,<br/>chunks, shares, jobs, chats)]
+    api --> qdrant[(Qdrant<br/>chunk vectors)]
+    api --> redis[(Redis<br/>rate limits)]
+    api --> llm[LLM provider<br/>OpenAI-compatible / Anthropic]
+    api --> store[(Upload volume)]
+    worker[Ingestion worker] -->|claims jobs<br/>SKIP LOCKED| pg
+    worker --> store
+    worker --> qdrant
+    api -. OTLP .-> otel[Langfuse / Jaeger / Tempo]
+    worker -. OTLP .-> otel
+    prom[Prometheus] -. scrapes /metrics .-> api
+```
+
+**Ask path:** authenticate → rate limit → resolve the documents this user may read (owned or
+shared, ready, matching filters) → dense and BM25 retrieval in parallel, restricted to exactly
+those documents → fusion → cross-encoder rerank → no evidence? refuse without calling the
+model → prompt with numbered, escaped sources → LLM → keep only citations to sources it was
+given; no valid citation? withhold the answer → respond with citations, tokens and latency.
+
+**Ingest path:** streamed upload with size limit and SHA-256 → PDF signature check → per-user
+dedupe → document and job rows in one transaction → worker parses pages (pypdf), cleans,
+chunks, embeds, upserts to Qdrant, stores pages and chunks → `ready` or `failed` with a
+readable reason.
+
+Design decisions, data model, security model and assumptions:
+[docs/architecture.md](docs/architecture.md). Deployment: [docs/deployment.md](docs/deployment.md).
+
+```
+src/rag_platform/
+  api/            routes, schemas, dependencies, middleware (request id, body limit, headers)
+  auth/           Argon2id passwords, JWT
+  core/           settings, errors, logging, rate limiting
+  db/             SQLAlchemy models and session
+  repositories/   all SQL; access.py is the one definition of "readable"
+  services/       auth, documents (upload/share), search, ask, conversations
+  ingestion/      PDF parsing, cleaning, chunking, background worker
+  embeddings/     Embedder protocol + Sentence Transformers
+  retrieval/      dense, BM25, fusion, tokenizer
+  reranking/      Reranker protocol + cross-encoder
+  generation/     LLM providers, prompts, injection detection, citations
+  evaluation/     datasets, metrics, LLM judge, runner
+  observability/  tracing, metrics
+migrations/       Alembic (0001-0004)
+evaluation/       datasets and committed results
+tests/unit, tests/integration
+```
+
+## Quick start
 
 Requirements: Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker with Compose v2.
 
 ```bash
-cp .env.example .env            # then set POSTGRES_PASSWORD (also in DATABASE_URL), QDRANT_API_KEY, JWT_SECRET
-docker compose up -d            # Postgres, Redis, Qdrant
-uv sync                         # creates .venv from uv.lock
-uv run alembic upgrade head     # apply database migrations
+cp .env.example .env    # set POSTGRES_PASSWORD (also inside DATABASE_URL), QDRANT_API_KEY, JWT_SECRET
+docker compose up -d    # Postgres, Redis, Qdrant on 127.0.0.1
+uv sync
+uv run alembic upgrade head
 uv run uvicorn --factory rag_platform.main:app_factory --reload
-uv run python -m rag_platform.ingestion.worker   # second terminal; downloads the embedding model on first start
+uv run python -m rag_platform.ingestion.worker   # second terminal
 ```
 
-URLs in `.env.example` use `127.0.0.1` rather than `localhost`: on Windows, `localhost` tries
-IPv6 first and each refused attempt costs about two seconds before falling back.
+Generate secrets with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. The
+embedding model (~130 MB) and reranker (~90 MB) download on first start. Interactive API docs:
+http://127.0.0.1:8000/docs (off in production).
 
-Open http://127.0.0.1:8000/docs (disabled when `ENVIRONMENT=production`).
+Everything in Docker instead: `docker compose --profile app up -d --build` (runs migrations in a
+one-shot container, then the API and worker).
 
-To run the API and worker in Docker as well: `docker compose --profile app up -d --build`
-(runs migrations in a one-shot `migrate` container first).
-
-## Checks
+To enable answers, point it at an LLM, for example any OpenAI-compatible endpoint:
 
 ```bash
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy
-uv run pytest                    # unit tests, no services needed
-uv run pytest -m integration     # needs `docker compose up -d`
+LLM_PROVIDER=openai                  # or: anthropic
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=...
+LLM_MODEL=...
 ```
+
+This also works with Groq, Google Gemini's OpenAI-compatible endpoint, vLLM, LiteLLM and
+Ollama (`http://127.0.0.1:11434/v1`). Without an LLM, search works and `/ask` answers
+`503 llm_not_configured`.
+
+All settings are documented in [.env.example](.env.example).
 
 ## API
 
-| Method | Path                         | Auth | Description                                              |
-|--------|------------------------------|------|----------------------------------------------------------|
-| GET    | `/health/live`               | no   | Process is up. Never checks dependencies.                |
-| GET    | `/health/ready`              | no   | Postgres, Redis and Qdrant answer in time, else 503.     |
-| POST   | `/auth/register`             | no   | Create an account (password 12 to 128 characters).       |
-| POST   | `/auth/login`                | no   | Returns a bearer token.                                  |
-| GET    | `/auth/me`                   | yes  | The current user.                                        |
-| POST   | `/documents`                 | yes  | Upload a PDF (multipart field `file`). Returns 202.      |
-| GET    | `/documents`                 | yes  | Readable documents, newest first (`ownership`=`all`/`owned`/`shared`). |
-| GET    | `/documents/{id}`            | yes  | Status, page count, latest ingestion job.                |
-| GET    | `/documents/{id}/pages`      | yes  | Cleaned text per page (`limit`, `offset`).               |
-| DELETE | `/documents/{id}`            | owner | Delete the document, its pages, chunks, vectors and file. |
-| GET    | `/documents/{id}/shares`     | owner | Who has read access.                                     |
-| POST   | `/documents/{id}/shares`     | owner | Share read access: `{"email": "..."}`.                   |
-| DELETE | `/documents/{id}/shares/{user_id}` | owner | Revoke read access.                                |
-| POST   | `/search`                    | yes  | Retrieve passages (`dense`, `sparse`, `hybrid`, `hybrid_rerank`). |
-| POST   | `/ask`                       | yes  | Grounded answer with citations, or an explicit refusal.  |
-| POST   | `/conversations`             | yes  | Start a conversation (optional `title`).                 |
-| GET    | `/conversations`             | yes  | Your conversations, latest first.                        |
-| GET    | `/conversations/{id}`        | yes  | The conversation with every stored turn and citation.    |
-| POST   | `/conversations/{id}/messages` | yes | Ask in context: earlier turns are sent to the model.    |
-| DELETE | `/conversations/{id}`        | yes  | Delete the conversation.                                 |
+| Method | Path | Who | Description |
+|---|---|---|---|
+| GET | `/health/live` | anyone | Process is up (no dependency checks) |
+| GET | `/health/ready` | anyone | Postgres, Redis and Qdrant respond, else 503 |
+| POST | `/auth/register` | anyone | Create an account (password 12-128 characters) |
+| POST | `/auth/login` | anyone | Get a bearer token |
+| GET | `/auth/me` | user | Current user |
+| POST | `/documents` | user | Upload a PDF (multipart field `file`), 202 |
+| GET | `/documents` | user | Readable documents (`ownership` = `all`, `owned`, `shared`) |
+| GET | `/documents/{id}` | reader | Status, page count, latest ingestion job |
+| GET | `/documents/{id}/pages` | reader | Cleaned text per page |
+| DELETE | `/documents/{id}` | owner | Delete document, pages, chunks, vectors and file |
+| GET / POST | `/documents/{id}/shares` | owner | List or grant read access (`{"email": ...}`) |
+| DELETE | `/documents/{id}/shares/{user_id}` | owner | Revoke read access |
+| POST | `/search` | user | Passages: `dense`, `sparse`, `hybrid`, `hybrid_rerank` (default) |
+| POST | `/ask` | user | Grounded answer with citations, or a refusal |
+| POST / GET | `/conversations` | user | Start or list conversations |
+| GET / DELETE | `/conversations/{id}` | owner | A conversation with every stored turn |
+| POST | `/conversations/{id}/messages` | owner | Ask in context of earlier turns |
+| GET | `/metrics` | internal | Prometheus metrics (optional bearer token) |
 
-Documents belong to the uploader, who can share read access with other users. Recipients can
-list, read, search and get answers from a shared document (`"access": "shared"`), but cannot
-delete or reshare it (403). For anyone else the document id answers 404, exactly like an id
-that does not exist. Revoking a share takes effect on the next request, including search.
-Conversations are always private to their owner.
+A document you can't read answers 404, exactly like one that doesn't exist. A document shared
+with you answers 403 to owner-only actions. Every error has the same shape, and every response
+carries `X-Request-ID`:
+
+```json
+{"error": {"code": "not_found", "message": "Document not found", "request_id": "3f2a9c..."}}
+```
+
+### Example session
 
 ```bash
-curl -s -X POST http://127.0.0.1:8000/auth/register -H "Content-Type: application/json"   -d '{"email": "ana@example.com", "password": "a-long-enough-password"}'
-TOKEN=$(curl -s -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json"   -d '{"email": "ana@example.com", "password": "a-long-enough-password"}' | jq -r .access_token)
-curl -s -X POST http://127.0.0.1:8000/documents -H "Authorization: Bearer $TOKEN" -F "file=@report.pdf"
+API=http://127.0.0.1:8000
+curl -s -X POST $API/auth/register -H "Content-Type: application/json" \
+  -d '{"email": "ana@example.com", "password": "a-long-enough-password"}'
+TOKEN=$(curl -s -X POST $API/auth/login -H "Content-Type: application/json" \
+  -d '{"email": "ana@example.com", "password": "a-long-enough-password"}' | jq -r .access_token)
+curl -s -X POST $API/documents -H "Authorization: Bearer $TOKEN" -F "file=@annual-report.pdf"
 ```
 
 ```json
 {
   "id": "7522735b-5394-4347-abe3-3841ac329368",
-  "filename": "report.pdf",
+  "filename": "annual-report.pdf",
   "size_bytes": 1043,
-  "content_sha256": "9c1f...",
+  "content_sha256": "9c1f…",
   "page_count": null,
   "status": "pending",
   "error_message": null,
+  "access": "owner",
   "created_at": "2026-10-31T11:18:58.990Z",
   "updated_at": "2026-10-31T11:18:58.990Z",
-  "latest_job": {"id": "8838...", "status": "queued", "attempts": 0, "started_at": null, "finished_at": null}
+  "latest_job": {"id": "8838…", "status": "queued", "attempts": 0, "started_at": null, "finished_at": null}
 }
 ```
 
-Once the worker has run, `GET /documents/{id}` shows `"status": "ready"` and `"page_count": 3`,
-and `GET /documents/{id}/pages` returns `[{"page_number": 1, "text": "...", "char_count": 20}, ...]`.
-
-Search your own documents (optionally only some of them):
+Once the worker has processed it, `status` is `ready` (or `failed` with a reason such as
+"No extractable text found. Scanned PDFs need OCR, which is not supported yet."). Upload errors:
+`400 empty_file`, `409 duplicate_document` (with `details.document_id`), `413
+payload_too_large`, `415 unsupported_media_type` (checked by file signature).
 
 ```bash
-curl -s -X POST http://127.0.0.1:8000/search -H "Authorization: Bearer $TOKEN"   -H "Content-Type: application/json"   -d '{"query": "How do PV modules turn light into power?", "mode": "dense", "top_k": 2}'
-# Default mode is hybrid_rerank. Filters narrow the documents searched:
-#   "filters": {"document_ids": [...], "filename_contains": "annual",
-#               "uploaded_after": "2026-01-01T00:00:00Z", "uploaded_before": "..."}
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"query": "How do PV modules turn light into power?", "mode": "hybrid_rerank", "top_k": 1,
+       "filters": {"filename_contains": "energy"}}'
 ```
 
 ```json
 {
-  "mode": "dense",
-  "latency_ms": 38.7,
+  "mode": "hybrid_rerank",
+  "latency_ms": 89.7,
   "results": [
     {
       "rank": 1,
-      "score": 0.764,
-      "chunk_id": "2b0c...",
-      "document_id": "7522...",
+      "score": -1.576,
+      "chunk_id": "2b0c…",
+      "document_id": "a41e…",
       "filename": "energy.pdf",
       "page_start": 1,
       "page_end": 1,
       "text": "Solar panels convert sunlight into electricity using photovoltaic cells.",
-      "scores": {"dense": 0.764}
+      "scores": {"dense": 0.764, "bm25": 1.458, "fused": 0.033, "rerank": -1.576}
     }
   ]
 }
 ```
 
-(Output from the Docker stack with `bge-small-en-v1.5`. Note that the query shares no words with
-the passage.) `document_ids` restricts the search; naming a document that isn't yours, or isn't
-ready yet, returns 404. `scores` shows every stage's score (`dense`, `bm25`, `fused`, `rerank`);
-`score` is the one the ranking uses.
-
-### Asking questions
-
-Configure a model first (any OpenAI-compatible endpoint, or Anthropic):
+(Values from the Docker stack with the default models; the query shares no words with the
+passage. `scores` shows each stage; `score` is the one the ranking uses. Filters also accept
+`document_ids`, `uploaded_after` and `uploaded_before`, with time zones.)
 
 ```bash
-LLM_PROVIDER=openai            # or: anthropic
-LLM_BASE_URL=https://api.openai.com/v1   # vLLM/Ollama/LiteLLM: their /v1 URL; Anthropic: https://api.anthropic.com
-LLM_API_KEY=...
-LLM_MODEL=...
-```
-
-Without it, `/ask` answers `503 llm_not_configured`; search keeps working.
-
-```bash
-curl -s -X POST http://127.0.0.1:8000/ask -H "Authorization: Bearer $TOKEN"   -H "Content-Type: application/json" -d '{"question": "What was revenue in Q3 2024?"}'
+curl -s -X POST $API/ask -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"question": "What was revenue in Q3 2024?"}'
 ```
 
 ```json
@@ -156,7 +209,7 @@ curl -s -X POST http://127.0.0.1:8000/ask -H "Authorization: Bearer $TOKEN"   -H
     {
       "number": 1,
       "chunk_id": "…",
-      "document_id": "…",
+      "document_id": "7522…",
       "filename": "annual-report.pdf",
       "page_start": 2,
       "page_end": 2,
@@ -170,55 +223,46 @@ curl -s -X POST http://127.0.0.1:8000/ask -H "Authorization: Bearer $TOKEN"   -H
 }
 ```
 
-(Response shape as produced by the integration tests with a scripted model; token and latency
-numbers depend on your model.) When the documents don't contain the answer, the response has
-`"answered": false`, the fixed answer `"I don't know based on the provided documents."`, no
-citations, and a `refusal_reason`: `no_sources`, `low_relevance` (optional threshold on the
-reranker score), `model_declined`, or `unsupported` (the model answered without citing a
-source it was given; the answer is withheld). Set `LLM_PRICE_INPUT_PER_1K` and
-`LLM_PRICE_OUTPUT_PER_1K` to get `cost_usd`.
+(Shape as produced by the integration tests with a scripted model; token counts and latency
+depend on your model.) When the documents don't answer the question: `"answered": false`, the
+fixed answer `"I don't know based on the provided documents."`, no citations, and a
+`refusal_reason` of `no_sources`, `low_relevance` (optional reranker-score threshold),
+`model_declined`, or `unsupported` (the model answered without citing a source it was given,
+so the answer is withheld).
 
-Upload errors: `400 empty_file`, `409 duplicate_document` (with `details.document_id` of your
-existing copy), `413 payload_too_large`, `415 unsupported_media_type` (checked by file signature,
-not by extension or Content-Type). PDFs that are scanned (no text), damaged or password-protected
-are accepted, then end as `"status": "failed"` with a readable `error_message`.
-
-Every error response uses one envelope, and every response carries `X-Request-ID`:
-
-```json
-{"error": {"code": "not_found", "message": "Document not found", "request_id": "3f2a..."}}
-```
+Conversations: `POST /conversations` and then `POST /conversations/{id}/messages` with
+`{"question": "And in 2023?"}`. The previous question is added to retrieval, and the last six
+messages are sent to the model. Every stored answer keeps the citations and usage the user saw.
 
 ## Evaluation
 
 ```bash
-docker compose up -d
-uv run python -m rag_platform.evaluation.runner                 # retrieval only
-uv run python -m rag_platform.evaluation.runner --generate      # + answers (needs LLM_* settings)
+uv run python -m rag_platform.evaluation.runner             # retrieval, all four modes
+uv run python -m rag_platform.evaluation.runner --generate  # + answers (needs LLM_* settings)
 ```
 
-The runner ingests the dataset through the real pipeline (PDF build, parsing, chunking,
-embedding, Qdrant) into a throwaway database, collection and upload folder, runs every question,
-and writes `evaluation/results/<dataset>-<timestamp>.{md,json}` with per-question rows. Nothing
-is simulated; without an LLM the generation section says "not measured".
+The runner pushes the dataset through the real pipeline (PDF build, parsing, chunking,
+embedding, Qdrant) in a throwaway database, collection and upload folder, runs every question,
+and writes `evaluation/results/<dataset>-<timestamp>.{md,json}` with per-question rows.
+Nothing is simulated; without an LLM the generation section reads "not measured".
 
 **Dataset** (`evaluation/datasets/enterprise-v1`): 6 fictional documents (annual report,
 datasheet, handbook, incident report, clinical trial summary, transit plan; 20 pages), 32
-questions with reference answers and the exact file and page holding the evidence, plus 6
-questions the corpus cannot answer. The facts are invented, so a model can't answer from
+questions with reference answers and the exact file and page holding the evidence, and 6
+questions the corpus can't answer. The facts are invented, so a model can't answer from
 memory. Questions are tagged `lexical` (shares key terms or codes with the text) or
-`paraphrase` (asks the same thing in different words). Use your own set with
-`--dataset path/to/dir` (same two files).
+`paraphrase`. Bring your own with `--dataset path/to/dir` (same two files).
 
-**Metrics.** Retrieval relevance is per page: a result counts if it comes from an expected file
-and covers an expected page. Recall@5, MRR and nDCG@5 (binary gains, duplicates of a page
-count once). Generation: answer rate on answerable questions, refusal rate on unanswerable ones,
-citation precision/recall against the expected pages (deterministic), and LLM-as-judge
-faithfulness (share of claims supported by the cited passages), relevancy and correctness vs
-the reference (0 / 0.5 / 1). Latency is wall-clock per question after one untimed warm-up;
-tokens and cost come from the provider's usage report.
+**Metrics.** Retrieval relevance is per page: a result counts if it is from an expected file
+and covers an expected page. Recall@5, MRR, nDCG@5 (binary gains; repeats of a page count
+once). Generation: answer rate on answerable questions, refusal rate on unanswerable ones,
+citation precision and recall against the expected pages (deterministic), and LLM-as-judge
+faithfulness (share of claims supported by the cited passages), relevancy and correctness
+against the reference. Latency is wall-clock per question after an untimed warm-up; tokens
+and cost come from the provider's usage report.
 
-**Measured results** (2026-10-31, Windows laptop CPU, no GPU; `evaluation/results/enterprise-v1-20261031T132037Z.md`):
+**Measured results** (2026-10-31, Windows laptop CPU, no GPU;
+[evaluation/results/enterprise-v1-20261031T132037Z.md](evaluation/results/enterprise-v1-20261031T132037Z.md)):
 
 | Mode | Recall@5 | MRR | nDCG@5 | Recall@5 lexical | Recall@5 paraphrase | Latency mean / p50 / p95 (ms) |
 |---|---|---|---|---|---|---|
@@ -227,55 +271,78 @@ tokens and cost come from the provider's usage report.
 | hybrid (RRF) | 1.000 | 0.839 | 0.880 | 1.000 | 1.000 | 52.2 / 51.2 / 60.0 |
 | hybrid + rerank | 1.000 | 0.943 | 0.957 | 1.000 | 1.000 | 228.6 / 218.7 / 278.5 |
 
-What this shows, and what it doesn't:
-* BM25 is the fastest and perfect on lexical questions, but misses 15% of paraphrased ones.
-* RRF fusion recovers BM25's misses but ranks the right page lower than dense alone (MRR 0.839
-  vs 0.924): BM25 promotes keyword matches from the wrong page.
-* The cross-encoder fixes that ordering (best MRR and nDCG) at ~4x the latency.
-* The corpus is small (20 pages), so Recall@5 saturates at 1.0 for three modes; MRR and nDCG
-  are the discriminating metrics here. A larger corpus with near-duplicate documents is
-  needed to separate the modes on recall. Treat these numbers as a regression baseline, not as
-  a general claim about the methods.
-* **Generation metrics have not been measured yet**: no LLM is configured on the machine that
-  produced this run. Configure `LLM_*` and run with `--generate`.
+* BM25 is fastest and perfect on lexical questions but misses 15% of paraphrased ones.
+* RRF recovers BM25's misses but ranks the right page lower than dense alone (MRR 0.839 vs
+  0.924): BM25 promotes keyword matches from the wrong page.
+* The cross-encoder fixes the ordering (best MRR and nDCG) at about 4x the latency.
+* The corpus is small, so Recall@5 saturates for three modes; MRR and nDCG separate them. A
+  larger corpus with near-duplicate documents is needed to compare recall. Treat these numbers
+  as a regression baseline, not a general claim about the methods.
+* **Generation metrics (faithfulness, relevancy, correctness, citation correctness, answer
+  latency, token cost) have not been measured yet**: no LLM was configured for this run.
 
-`tests/integration/test_retrieval_benchmark.py` runs the same evaluation in CI and fails if
-any mode drops below a floor set slightly under these numbers.
+`tests/integration/test_retrieval_benchmark.py` repeats the retrieval evaluation in CI and fails
+when a mode drops below a floor set just under these numbers.
+
+## Testing
+
+```bash
+uv run ruff check . && uv run ruff format --check . && uv run mypy
+uv run pytest                  # unit tests (no services)
+uv run pytest -m integration   # needs `docker compose up -d`; real models, Postgres, Qdrant, Redis
+```
+
+Unit tests cover parsing (empty, malformed, truncated, encrypted, scanned PDFs), cleaning,
+chunking, BM25, fusion, metrics, prompt construction and escaping, injection detection,
+citation parsing, the ask pipeline with a scripted LLM, provider wire formats, auth primitives,
+rate limiting, metrics and tracing. Integration tests run against real services: migrations
+(upgrade equals models, clean downgrade), upload and ingestion end to end, duplicates,
+cross-user access on every read path, sharing and revocation, search and ask isolation,
+conversations, the real embedding and reranker models, Redis rate limiting, and the retrieval
+regression benchmark.
 
 ## Observability
 
-* **Logs**: JSON lines on stdout with `request_id` on every entry, plus `trace_id`/`span_id`
-  inside traced work. Request bodies, questions and answers are not logged.
-* **Traces** (OpenTelemetry): HTTP requests plus spans for `search`, `retrieve.dense`,
-  `retrieve.bm25`, `rerank`, `llm.generate` (with `gen_ai.*` model and token attributes) and
-  `ingest.document` in the worker. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export over OTLP/HTTP.
-  Span attributes carry ids, counts and timings only, never document text or questions.
-* **Langfuse**: it accepts OTLP, so no SDK is needed:
+* **Logs**: JSON lines with `request_id`, plus `trace_id`/`span_id` inside traced work.
+  Questions, answers and document text are not logged.
+* **Traces** (OpenTelemetry): HTTP requests and spans for `search`, `retrieve.dense`,
+  `retrieve.bm25`, `rerank`, `llm.generate` (`gen_ai.*` model and token attributes) and
+  `ingest.document`. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export. Langfuse ingests OTLP
+  directly: endpoint `https://cloud.langfuse.com/api/public/otel` and
+  `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64 of public:secret key>`. Span
+  attributes hold ids, counts and timings, never user content.
+* **Metrics** at `/metrics`: request rate and latency per route template, search latency per
+  mode, LLM tokens, latency and cost per model, answer outcomes, suspicious sources, rate-limit
+  rejections.
 
-  ```bash
-  OTEL_EXPORTER_OTLP_ENDPOINT=https://cloud.langfuse.com/api/public/otel
-  # base64 of "<public key>:<secret key>"
-  OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <base64>
-  ```
+## Security
 
-* **Metrics** (Prometheus) at `GET /metrics`: request rate and latency by route template,
-  search latency by mode, LLM tokens, latency and cost by model, answer outcomes (answered or
-  refusal reason), suspicious-source count, rate-limit rejections. Set `METRICS_TOKEN` to
-  require a bearer token, or `METRICS_ENABLED=false`.
-
-## Security summary
-
-* Secrets only from the environment; the app refuses to start with a missing or short
-  `JWT_SECRET`. Passwords hashed with Argon2id; JWTs pinned to one algorithm and audience.
-* Document-level authorization in one place (`repositories/access.py`); other users'
-  documents answer 404. Covered by integration tests for every read path.
-* Uploads: size limit enforced on the streamed body (declared and actual), PDF signature check,
-  generated storage names, page limit, per-user upload rate limit.
-* Prompt injection: retrieved text is escaped data in the user message, never instructions;
+* Secrets only from the environment; startup fails on a missing or short `JWT_SECRET`.
+  Argon2id passwords; JWTs pinned to one algorithm and audience.
+* Document-level authorization in one module (`repositories/access.py`), used by every read
+  path; search is restricted to a document set resolved in Postgres before Qdrant or BM25 run.
+* Uploads: streamed size limit (declared and actual bytes), PDF signature check, generated
+  storage names, page limit, per-user upload rate limit.
+* Prompt injection: document text is escaped data in the user message, never instructions;
   suspicious passages are flagged; uncited answers are withheld.
-* Rate limits in Redis: login and registration per client IP (10/min), search 60/min, ask
-  20/min, uploads 100/hour per user; `429` with `Retry-After`.
-* Safe errors: one JSON envelope, no stack traces or upstream messages; validation errors
-  never echo input. Security headers on every response (CSP, nosniff, frame denial,
-  referrer and permissions policy; HSTS in production).
+* Rate limits in Redis (login and registration per IP, search, ask and upload per user), `429`
+  with `Retry-After`.
+* Safe errors (no stack traces, no echoed input), CSP and other security headers, HSTS in
+  production, datastores never exposed publicly.
 
+## Limitations
+
+* **No OCR**: scanned PDFs without a text layer fail with a clear message. Tables and
+  multi-column layouts are extracted as plain text in pypdf's reading order.
+* **English-first**: the default embedding model, reranker and BM25 tokenizer (English
+  stopwords, no stemming) are tuned for English. Multilingual models are a configuration change
+  but haven't been evaluated here.
+* **BM25 in memory**: one index per user per API process, rebuilt when that user's corpus
+  changes. Fine for hundreds of PDFs per user; very large corpora need a dedicated sparse index.
+* **Parsing is not sandboxed**: a pathological PDF can occupy a worker thread for a long time
+  (there is a page limit, but no hard timeout).
+* **Evaluation**: a small synthetic dataset (saturates Recall@5). The LLM judge is by default
+  the answering model itself, which can be lenient; generation metrics are unmeasured until an
+  LLM is configured.
+* **Sharing** is per user and read-only; there are no groups, roles or admin read access.
+* **Local file storage** for uploads (one volume); multiple hosts would need object storage.

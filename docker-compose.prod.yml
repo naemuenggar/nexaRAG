@@ -1,0 +1,84 @@
+# Production overrides: docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#   --profile app up -d
+#
+# * The app image comes from the registry (APP_IMAGE), not a local build.
+# * Only Caddy is reachable from outside; it terminates TLS (automatic Let's Encrypt for
+#   DOMAIN) and proxies to the API. Datastores and the API publish no ports at all.
+# * Restart policies and memory limits for every service.
+
+services:
+  postgres:
+    ports: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 1g }
+
+  redis:
+    ports: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 256m }
+
+  qdrant:
+    ports: !reset []
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits: { memory: 2g }
+
+  migrate:
+    image: ${APP_IMAGE:?set APP_IMAGE, e.g. ghcr.io/<owner>/<repo>:v1.0.0}
+    pull_policy: always
+
+  api:
+    image: ${APP_IMAGE:?set APP_IMAGE}
+    pull_policy: always
+    ports: !reset []
+    environment:
+      ENVIRONMENT: production
+    command:
+      - uvicorn
+      - --factory
+      - rag_platform.main:app_factory
+      - --host=0.0.0.0
+      - --port=8000
+      - --proxy-headers
+      # The API publishes no port, so only containers on this network (Caddy) can reach it;
+      # trusting their X-Forwarded-For is safe and gives rate limiting the real client IP.
+      - --forwarded-allow-ips=*
+      - --workers=2
+    deploy:
+      resources:
+        limits: { memory: 3g }
+
+  worker:
+    image: ${APP_IMAGE:?set APP_IMAGE}
+    pull_policy: always
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      resources:
+        limits: { memory: 3g }
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN to the public host name}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    profiles: ["app"]
+
+volumes:
+  caddy-data:
+  caddy-config:

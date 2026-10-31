@@ -1,7 +1,7 @@
 # Architecture
 
-This document is the design proposal for the platform. Sections marked *(planned)* describe
-later milestones; everything else exists in the code today.
+How the platform is built and why. Everything described here exists in the code; known gaps
+are listed in section 7 and in the README's Limitations.
 
 ## 1. Requirements recap
 
@@ -19,8 +19,8 @@ later milestones; everything else exists in the code today.
 ```mermaid
 flowchart LR
     client[Client] -->|JWT| api[FastAPI API]
-    api --> pg[(PostgreSQL<br/>users, documents,<br/>chunks, jobs, chats)]
-    api --> redis[(Redis<br/>rate limits, cache)]
+    api --> pg[(PostgreSQL<br/>users, documents, pages,<br/>chunks, shares, jobs, chats)]
+    api --> redis[(Redis<br/>rate limits)]
     api --> qdrant[(Qdrant<br/>chunk vectors)]
     api -->|enqueue job row| pg
     worker[Ingestion worker] -->|claim job<br/>SKIP LOCKED| pg
@@ -32,11 +32,12 @@ flowchart LR
     worker -. traces .-> otel
 ```
 
-**Query path** *(planned)*: authenticate → rate-limit → resolve the caller's accessible document
-ids → dense search (Qdrant, filtered by `owner_id`/`document_id` payload) and BM25 search
-(filtered the same way) in parallel → fusion (RRF by default, weighted-score optional) →
-cross-encoder rerank top-N → evidence sufficiency check → grounded generation with numbered
-sources → citation validation → persist turn → respond.
+**Query path**: authenticate → rate-limit → resolve the document ids the caller may read
+(owned or shared, ready, matching filters) in Postgres → dense search (Qdrant, `document_id`
+payload filter on exactly that set) and BM25 (the caller's own index, same set) in parallel →
+fusion (RRF by default, weighted optional) → cross-encoder rerank of the top 20 → evidence
+check → grounded generation with numbered sources → citation validation → (in conversations)
+store the turn → respond.
 
 **Ingestion path**: upload streamed to a temp file while the size limit and SHA-256 are
 computed → PDF signature check → per-owner dedupe → `documents` row (`pending`) and
@@ -52,14 +53,13 @@ replaces pages, chunks and vectors instead of duplicating them.
 src/rag_platform/
   main.py              app factory, lifespan, middleware wiring
   container.py         composition root: builds clients once, exposes them via DI
-  core/                config, logging, error types and handlers
+  core/                config, logging, error types and handlers, rate limiting
   api/                 HTTP only: routes, request/response schemas, dependencies, middleware
   db/                  SQLAlchemy base, session factory, ORM models
-  infrastructure/      clients and probes for Postgres, Redis, Qdrant
-  # added in later milestones, one package per concern:
+  infrastructure/      Qdrant client and vector index, file storage, health probes
   auth/                Argon2id password hashing, JWT access tokens
-  repositories/        all SQL lives here; document queries take the owner's id
-  services/            use-case orchestration (auth, documents; later ask, chats)
+  repositories/        all SQL lives here; access.py defines "readable" once
+  services/            use cases: auth, documents and sharing, search, ask, conversations
   ingestion/           PDF validation + parsing, text cleaning, chunking, worker
   embeddings/          Embedder protocol + Sentence Transformers implementation
   retrieval/           dense (Qdrant) and BM25 retrievers, tokenizer, RRF / weighted fusion
@@ -67,6 +67,7 @@ src/rag_platform/
   generation/          LLM provider protocol (OpenAI-compatible, Anthropic), prompts,
                        prompt-injection detection, citation parsing and verification
   evaluation/          datasets, retrieval/citation metrics, LLM judge, runner
+  observability/       OpenTelemetry tracing, Prometheus metrics
 migrations/            Alembic, async env reading DATABASE_URL
 tests/unit|integration
 ```
@@ -94,7 +95,7 @@ never touch SQL or clients directly; services never import FastAPI.
 | Sparse retrieval | Own Okapi BM25 (k1=1.5, b=0.75), one in-memory index per user, cached per process and rebuilt when a fingerprint (ready documents, chunk count, last update) changes | Exact BM25 with per-user term statistics: other users' documents never influence scores. Qdrant's sparse vectors would compute IDF across all users. Cost: memory and a rebuild per corpus change, fine for hundreds of PDFs per user; see limitations. |
 | Search results | Retrievers return ids and scores only; text, page and filename are loaded from Postgres scoped to the owner and to `ready` documents | A stale vector (e.g. a failed delete) can't surface: it has no live row. |
 | Model warm-up | API loads the embedding model in the background at startup | The first search otherwise took ~12 s on CPU. |
-| Hybrid fusion | RRF (k=60) by default, weighted min-max fusion as an option; each retriever contributes 30 candidates | RRF needs no score calibration between BM25 and cosine. M8 measures whether weighted fusion is better on our data. |
+| Hybrid fusion | RRF (k=60) by default, weighted min-max fusion as an option; each retriever contributes 30 candidates | RRF needs no score calibration between BM25 and cosine. Weighted fusion can be compared with the evaluation runner (`FUSION_METHOD=weighted`); that comparison has not been run yet. |
 | Reranking | `cross-encoder/ms-marco-MiniLM-L-6-v2` over the top 20 fused candidates; default search mode | Cross-encoders read query and passage together and fix ordering mistakes of both retrievers. 20 candidates keeps CPU latency bounded; configurable. |
 | Metadata filters | Filename substring and upload-date range, resolved in Postgres to a set of document ids before retrieval | One mechanism for all filters: both retrievers already accept a document set, and the owner condition is never optional. |
 | Grounding | Sources numbered and escaped inside `<source>` elements of the user message; the system prompt holds the only instructions, including a fixed refusal sentence | Document text can't close its element or pose as instructions; the refusal is detected by string match, not by interpreting the model. |
@@ -189,4 +190,4 @@ lenient towards its own answers; use a different, stronger model for judging whe
 7. Conversation history and multi-user authorization (done)
 8. Evaluation and benchmarking (done; generation metrics pending an LLM)
 9. Observability, security and performance (done)
-10. Docker deployment, CI/CD and documentation
+10. Docker deployment, CI/CD and documentation (done)

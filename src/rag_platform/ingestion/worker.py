@@ -122,6 +122,7 @@ class IngestionWorker:
     async def run_forever(self, stop: asyncio.Event) -> None:
         logger.info("worker_started")
         while not stop.is_set():
+            self._heartbeat()
             try:
                 await self._reap_exhausted()
                 worked = await self.run_once()
@@ -135,6 +136,14 @@ class IngestionWorker:
                         stop.wait(), timeout=self._settings.ingestion_poll_interval_seconds
                     )
         logger.info("worker_stopped")
+
+    def _heartbeat(self) -> None:
+        path = self._settings.worker_heartbeat_file
+        if path is not None:
+            try:
+                path.touch()
+            except OSError:
+                logger.warning("heartbeat_write_failed", path=str(path))
 
     async def _process(self, claimed: _ClaimedJob) -> _Processed:
         data = await self._storage.read_bytes(claimed.storage_path)

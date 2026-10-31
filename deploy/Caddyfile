@@ -1,0 +1,19 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Metrics stay internal: scrape the API container directly from the Docker network.
+	@metrics path /metrics
+	respond @metrics 404
+
+	reverse_proxy api:8000 {
+		# Uploads can be large and answers slow; don't cut them off at the proxy.
+		transport http {
+			read_timeout 180s
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

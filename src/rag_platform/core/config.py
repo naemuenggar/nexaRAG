@@ -125,6 +125,8 @@ class Settings(BaseSettings):
     ingestion_max_attempts: int = Field(default=3, ge=1, le=20)
     # A RUNNING job whose worker has not finished within this window is assumed dead and retried.
     ingestion_lease_seconds: int = Field(default=600, ge=10, le=24 * 3600)
+    # The worker touches this file on every loop; container health checks read its age.
+    worker_heartbeat_file: Path | None = None
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 

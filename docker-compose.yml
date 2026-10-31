@@ -47,6 +47,7 @@ services:
       retries: 10
 
   migrate:
+    image: ${APP_IMAGE:-enterprise-rag-platform:local}
     build: .
     command: ["alembic", "upgrade", "head"]
     env_file: .env
@@ -59,6 +60,7 @@ services:
     profiles: ["app"]
 
   api:
+    image: ${APP_IMAGE:-enterprise-rag-platform:local}
     build: .
     env_file: .env
     environment:
@@ -85,9 +87,11 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
     profiles: ["app"]
 
   worker:
+    image: ${APP_IMAGE:-enterprise-rag-platform:local}
     build: .
     command: ["python", "-m", "rag_platform.ingestion.worker"]
     env_file: .env
@@ -98,6 +102,7 @@ services:
       STORAGE_DIR: /app/data/uploads
       # Model weights are downloaded once into this volume, not on every container start.
       HF_HOME: /app/data/hf-cache
+      WORKER_HEARTBEAT_FILE: /tmp/worker-heartbeat
     volumes:
       - uploads:/app/data/uploads
       - hf-cache:/app/data/hf-cache
@@ -106,6 +111,13 @@ services:
         condition: service_completed_successfully
       qdrant:
         condition: service_healthy
+    healthcheck:
+      # Healthy while the worker loop keeps running (it touches the file every poll interval).
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/worker-heartbeat') < 120 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
     stop_grace_period: 30s
     restart: unless-stopped
     profiles: ["app"]
