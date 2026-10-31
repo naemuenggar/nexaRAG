@@ -11,6 +11,13 @@ from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator, m
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from rag_platform.retrieval.fusion import FusionMethod
+from rag_platform.retrieval.types import RetrievalMode
+
+
+class LLMProviderName(StrEnum):
+    NONE = "none"
+    OPENAI = "openai"  # any OpenAI-compatible /chat/completions endpoint
+    ANTHROPIC = "anthropic"
 
 
 class Environment(StrEnum):
@@ -81,6 +88,26 @@ class Settings(BaseSettings):
     rerank_candidates: int = Field(default=20, ge=1, le=200)
     reranker_warm_up: bool = True
 
+    # "none" disables /ask (it answers 503) until a provider is configured.
+    llm_provider: LLMProviderName = LLMProviderName.NONE
+    llm_base_url: str = ""
+    llm_api_key: SecretStr | None = None
+    llm_model: str = ""
+    llm_timeout_seconds: float = Field(default=60, gt=0, le=600)
+    llm_max_tokens: int = Field(default=700, ge=16, le=8192)
+    llm_temperature: float = Field(default=0.0, ge=0, le=2)
+    # USD per 1,000 tokens, for cost reporting only. Leave unset if unknown.
+    llm_price_input_per_1k: float | None = Field(default=None, ge=0)
+    llm_price_output_per_1k: float | None = Field(default=None, ge=0)
+
+    ask_retrieval_mode: RetrievalMode = RetrievalMode.HYBRID_RERANK
+    ask_top_k: int = Field(default=6, ge=1, le=30)
+    # With reranking: skip the LLM and answer "I don't know" when the best passage's
+    # cross-encoder score is below this. Unset = always ask the model.
+    ask_min_rerank_score: float | None = None
+    # Treat an answer that cites nothing as unsupported and return the refusal instead.
+    ask_require_citations: bool = True
+
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = Field(default=60, ge=1, le=24 * 60)
@@ -105,11 +132,26 @@ class Settings(BaseSettings):
             raise ValueError("database_url must use the 'postgresql+asyncpg' scheme")
         return value
 
-    @field_validator("qdrant_api_key", mode="before")
+    @field_validator(
+        "qdrant_api_key",
+        "llm_api_key",
+        "llm_price_input_per_1k",
+        "llm_price_output_per_1k",
+        "ask_min_rerank_score",
+        mode="before",
+    )
     @classmethod
     def _blank_is_none(cls, value: object) -> object:
-        # `QDRANT_API_KEY=` in an env file means "no key", not "an empty key".
+        # `QDRANT_API_KEY=` in an env file means "not set", not "an empty value".
         return None if value == "" else value
+
+    @model_validator(mode="after")
+    def _llm_settings_complete(self) -> "Settings":
+        if self.llm_provider is not LLMProviderName.NONE and not (
+            self.llm_base_url and self.llm_model
+        ):
+            raise ValueError("llm_base_url and llm_model are required when llm_provider is set")
+        return self
 
     @model_validator(mode="after")
     def _overlap_smaller_than_chunk(self) -> "Settings":

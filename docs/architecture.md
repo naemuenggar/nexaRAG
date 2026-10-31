@@ -64,7 +64,8 @@ src/rag_platform/
   embeddings/          Embedder protocol + Sentence Transformers implementation
   retrieval/           dense (Qdrant) and BM25 retrievers, tokenizer, RRF / weighted fusion
   reranking/           Reranker protocol + cross-encoder implementation
-  generation/          LLM provider interface, prompts, citation handling     (M6)
+  generation/          LLM provider protocol (OpenAI-compatible, Anthropic), prompts,
+                       prompt-injection detection, citation parsing and verification
   evaluation/          datasets, metrics, experiment runner                   (M8)
 migrations/            Alembic, async env reading DATABASE_URL
 tests/unit|integration
@@ -96,6 +97,10 @@ never touch SQL or clients directly; services never import FastAPI.
 | Hybrid fusion | RRF (k=60) by default, weighted min-max fusion as an option; each retriever contributes 30 candidates | RRF needs no score calibration between BM25 and cosine. M8 measures whether weighted fusion is better on our data. |
 | Reranking | `cross-encoder/ms-marco-MiniLM-L-6-v2` over the top 20 fused candidates; default search mode | Cross-encoders read query and passage together and fix ordering mistakes of both retrievers. 20 candidates keeps CPU latency bounded; configurable. |
 | Metadata filters | Filename substring and upload-date range, resolved in Postgres to a set of document ids before retrieval | One mechanism for all filters: both retrievers already accept a document set, and the owner condition is never optional. |
+| Grounding | Sources numbered and escaped inside `<source>` elements of the user message; the system prompt holds the only instructions, including a fixed refusal sentence | Document text can't close its element or pose as instructions; the refusal is detected by string match, not by interpreting the model. |
+| Citation checks | `[n]` markers are kept only if `n` was provided; an answer with no valid citation is withheld and replaced by the refusal (`ASK_REQUIRE_CITATIONS`) | The model cannot cite unseen documents, and uncited claims never reach the user. Snippets are the source sentence that best matches the citing sentence. |
+| Prompt injection | Structural isolation plus a regex detector that marks suspicious sources in the prompt and counts them in the response | Detection alone is bypassable; isolation alone gives no signal. Together they make attempts visible without dropping legitimate documents. |
+| Orchestration | A plain async pipeline (retrieve → check → generate → verify), not LangGraph | The flow is linear with two early exits. A graph framework would add a dependency and indirection without adding capability; it becomes worthwhile if multi-step agentic retrieval is added. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -166,7 +171,7 @@ sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer i
 3. Chunking, embeddings and Qdrant indexing (done)
 4. Dense and BM25 retrieval (done)
 5. Hybrid search and reranking (done)
-6. Grounded LLM generation and citations
+6. Grounded LLM generation and citations (done)
 7. Conversation history and multi-user authorization
 8. Evaluation and benchmarking
 9. Observability, security and performance

@@ -57,6 +57,16 @@ class UnsupportedMediaTypeError(AppError):
     code = "unsupported_media_type"
 
 
+class ServiceUnavailableError(AppError):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    code = "service_unavailable"
+
+
+class UpstreamError(AppError):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    code = "upstream_error"
+
+
 class RateLimitedError(AppError):
     status_code = status.HTTP_429_TOO_MANY_REQUESTS
     code = "rate_limited"

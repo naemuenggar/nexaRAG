@@ -112,3 +112,45 @@ class SearchResponseOut(BaseModel):
     mode: RetrievalMode
     results: list[SearchHitOut]
     latency_ms: float
+
+
+class AskRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=2000)
+    top_k: int | None = Field(default=None, ge=1, le=30)
+    filters: SearchFilters | None = None
+
+
+class CitationOut(BaseModel):
+    number: int
+    chunk_id: uuid.UUID
+    document_id: uuid.UUID
+    filename: str
+    page_start: int
+    page_end: int
+    snippet: str
+
+
+class UsageOut(BaseModel):
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    cost_usd: float | None
+
+
+class LatencyOut(BaseModel):
+    retrieval_ms: float
+    generation_ms: float
+    total_ms: float
+
+
+class AskResponse(BaseModel):
+    answer: str
+    answered: bool
+    refusal_reason: str | None
+    citations: list[CitationOut]
+    sources_considered: int
+    suspicious_sources: int
+    usage: UsageOut | None
+    latency: LatencyOut

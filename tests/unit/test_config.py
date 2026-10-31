@@ -66,3 +66,11 @@ def test_settings_read_from_environment(monkeypatch: pytest.MonkeyPatch) -> None
 def test_upload_limit_bounds() -> None:
     with pytest.raises(ValidationError):
         make_settings(max_upload_size_mb=0)
+
+
+def test_env_example_loads_as_valid_settings() -> None:
+    """The shipped .env.example must produce valid settings (blank optional values included)."""
+    settings = Settings(_env_file=".env.example")
+    assert settings.llm_provider.value == "none"
+    assert settings.llm_price_input_per_1k is None
+    assert settings.ask_min_rerank_score is None

@@ -14,6 +14,7 @@ from rag_platform.core.errors import AuthenticationError
 from rag_platform.db.models import User
 from rag_platform.repositories.users import UserRepository
 from rag_platform.retrieval.dense import DenseRetriever
+from rag_platform.services.ask import AskService
 from rag_platform.services.auth import AuthService
 from rag_platform.services.documents import DocumentService
 from rag_platform.services.search import SearchService
@@ -91,3 +92,10 @@ def get_search_service(session: DbSessionDep, container: ContainerDep) -> Search
 
 
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service)]
+
+
+def get_ask_service(search: SearchServiceDep, container: ContainerDep) -> AskService:
+    return AskService(search, container.llm, container.settings)
+
+
+AskServiceDep = Annotated[AskService, Depends(get_ask_service)]

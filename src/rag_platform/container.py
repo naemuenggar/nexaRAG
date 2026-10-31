@@ -15,6 +15,7 @@ from rag_platform.core.config import Settings
 from rag_platform.db.session import create_engine, create_session_factory
 from rag_platform.embeddings.base import Embedder
 from rag_platform.embeddings.sentence_transformers import create_embedder
+from rag_platform.generation.llm import LLMProvider, create_llm
 from rag_platform.infrastructure.health import (
     HealthProbe,
     postgres_probe,
@@ -41,6 +42,7 @@ class Container:
     embedder: Embedder
     bm25_cache: BM25IndexCache
     reranker: Reranker
+    llm: LLMProvider | None
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
@@ -59,6 +61,7 @@ class Container:
             # The model loads on first query, not at startup, so the API boots fast.
             embedder=create_embedder(settings),
             reranker=create_reranker(settings),
+            llm=create_llm(settings),
             bm25_cache=BM25IndexCache(
                 settings.bm25_cache_max_owners, k1=settings.bm25_k1, b=settings.bm25_b
             ),
@@ -70,6 +73,8 @@ class Container:
         )
 
     async def aclose(self) -> None:
+        if self.llm is not None:
+            await self.llm.aclose()
         await self.qdrant.close()
         await self.redis.aclose()
         await self.engine.dispose()

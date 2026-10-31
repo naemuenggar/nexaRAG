@@ -4,9 +4,9 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 5 of 10 (hybrid search and reranking).** Users upload PDFs, the worker
-> chunks, embeds and indexes them, and `POST /search` retrieves passages with dense, BM25,
-> hybrid (fused) or hybrid + cross-encoder reranking. Answer generation comes next. See
+> **Status: Milestone 6 of 10 (grounded generation and citations).** `POST /ask` answers from
+> your documents with verified citations (document, file, page, snippet), or says it doesn't
+> know. Conversations, evaluation and observability come next. See
 > [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
@@ -56,6 +56,7 @@ uv run pytest -m integration     # needs `docker compose up -d`
 | GET    | `/documents/{id}/pages`      | yes  | Cleaned text per page (`limit`, `offset`).               |
 | DELETE | `/documents/{id}`            | yes  | Delete the document, its pages and the stored file.      |
 | POST   | `/search`                    | yes  | Retrieve passages (`dense`, `sparse`, `hybrid`, `hybrid_rerank`). |
+| POST   | `/ask`                       | yes  | Grounded answer with citations, or an explicit refusal.  |
 
 Documents belong to the uploader. Another user's document id answers 404, exactly like an id
 that does not exist.
@@ -117,6 +118,54 @@ curl -s -X POST http://127.0.0.1:8000/search -H "Authorization: Bearer $TOKEN"  
 the passage.) `document_ids` restricts the search; naming a document that isn't yours, or isn't
 ready yet, returns 404. `scores` shows every stage's score (`dense`, `bm25`, `fused`, `rerank`);
 `score` is the one the ranking uses.
+
+### Asking questions
+
+Configure a model first (any OpenAI-compatible endpoint, or Anthropic):
+
+```bash
+LLM_PROVIDER=openai            # or: anthropic
+LLM_BASE_URL=https://api.openai.com/v1   # vLLM/Ollama/LiteLLM: their /v1 URL; Anthropic: https://api.anthropic.com
+LLM_API_KEY=...
+LLM_MODEL=...
+```
+
+Without it, `/ask` answers `503 llm_not_configured`; search keeps working.
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/ask -H "Authorization: Bearer $TOKEN"   -H "Content-Type: application/json" -d '{"question": "What was revenue in Q3 2024?"}'
+```
+
+```json
+{
+  "answer": "Q3 2024 revenue was 4.2 million dollars [1].",
+  "answered": true,
+  "refusal_reason": null,
+  "citations": [
+    {
+      "number": 1,
+      "chunk_id": "…",
+      "document_id": "…",
+      "filename": "annual-report.pdf",
+      "page_start": 2,
+      "page_end": 2,
+      "snippet": "The company reported quarterly revenue of 4.2 million dollars in Q3 2024."
+    }
+  ],
+  "sources_considered": 3,
+  "suspicious_sources": 0,
+  "usage": {"model": "…", "prompt_tokens": 412, "completion_tokens": 14, "cost_usd": null},
+  "latency": {"retrieval_ms": 85.2, "generation_ms": 910.4, "total_ms": 996.1}
+}
+```
+
+(Response shape as produced by the integration tests with a scripted model; token and latency
+numbers depend on your model.) When the documents don't contain the answer, the response has
+`"answered": false`, the fixed answer `"I don't know based on the provided documents."`, no
+citations, and a `refusal_reason`: `no_sources`, `low_relevance` (optional threshold on the
+reranker score), `model_declined`, or `unsupported` (the model answered without citing a
+source it was given; the answer is withheld). Set `LLM_PRICE_INPUT_PER_1K` and
+`LLM_PRICE_OUTPUT_PER_1K` to get `cost_usd`.
 
 Upload errors: `400 empty_file`, `409 duplicate_document` (with `details.document_id` of your
 existing copy), `413 payload_too_large`, `415 unsupported_media_type` (checked by file signature,

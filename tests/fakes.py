@@ -6,6 +6,7 @@ import re
 from collections.abc import Sequence
 
 from rag_platform.embeddings.base import Vector
+from rag_platform.generation.llm import ChatMessage, LLMResult
 
 _TOKEN = re.compile(r"\w+")
 
@@ -62,3 +63,27 @@ class OverlapReranker:
         self.calls.append((query, len(passages)))
         terms = set(_TOKEN.findall(query.lower()))
         return [len(terms & set(_TOKEN.findall(p.lower()))) / (len(terms) or 1) for p in passages]
+
+
+class ScriptedLLM:
+    """Returns queued replies (the last one repeats) and records every prompt it was sent."""
+
+    def __init__(self, *replies: str, model: str = "scripted-llm") -> None:
+        self._replies = list(replies)
+        self._model = model
+        self.prompts: list[list[ChatMessage]] = []
+
+    @property
+    def model(self) -> str:
+        return self._model
+
+    async def complete(
+        self, messages: Sequence[ChatMessage], *, max_tokens: int, temperature: float
+    ) -> LLMResult:
+        self.prompts.append(list(messages))
+        text = self._replies.pop(0) if len(self._replies) > 1 else self._replies[0]
+        prompt_tokens = sum(len(m.content.split()) for m in messages)
+        return LLMResult(text, self._model, prompt_tokens, len(text.split()))
+
+    async def aclose(self) -> None:
+        return None
