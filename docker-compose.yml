@@ -65,8 +65,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       QDRANT_URL: http://qdrant:6333
+      STORAGE_DIR: /app/data/uploads
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - uploads:/app/data/uploads
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -81,7 +84,26 @@ services:
       retries: 5
     profiles: ["app"]
 
+  worker:
+    build: .
+    command: ["python", "-m", "rag_platform.ingestion.worker"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      QDRANT_URL: http://qdrant:6333
+      STORAGE_DIR: /app/data/uploads
+    volumes:
+      - uploads:/app/data/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    stop_grace_period: 30s
+    restart: unless-stopped
+    profiles: ["app"]
+
 volumes:
+  uploads:
   postgres-data:
   redis-data:
   qdrant-data:

@@ -19,6 +19,7 @@ from rag_platform.infrastructure.health import (
     qdrant_probe,
     redis_probe,
 )
+from rag_platform.infrastructure.storage import LocalFileStorage
 
 
 @dataclass(slots=True)
@@ -28,6 +29,7 @@ class Container:
     session_factory: async_sessionmaker[AsyncSession]
     redis: Redis
     qdrant: AsyncQdrantClient
+    storage: LocalFileStorage
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
@@ -47,6 +49,7 @@ class Container:
             session_factory=create_session_factory(engine),
             redis=redis,
             qdrant=qdrant,
+            storage=LocalFileStorage(settings.storage_dir),
             health_probes={
                 "postgres": postgres_probe(engine),
                 "redis": redis_probe(redis),

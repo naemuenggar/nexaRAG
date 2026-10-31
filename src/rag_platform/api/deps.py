@@ -4,10 +4,17 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 
 from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from rag_platform.auth.tokens import decode_access_token
 from rag_platform.container import Container
 from rag_platform.core.config import Settings
+from rag_platform.core.errors import AuthenticationError
+from rag_platform.db.models import User
+from rag_platform.repositories.users import UserRepository
+from rag_platform.services.auth import AuthService
+from rag_platform.services.documents import DocumentService
 
 
 def get_container(request: Request) -> Container:
@@ -37,3 +44,36 @@ async def get_db_session(container: ContainerDep) -> AsyncIterator[AsyncSession]
 
 
 DbSessionDep = Annotated[AsyncSession, Depends(get_db_session)]
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(
+    session: DbSessionDep,
+    settings: SettingsDep,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+) -> User:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise AuthenticationError("Not authenticated")
+    user_id = decode_access_token(credentials.credentials, settings)
+    user = await UserRepository(session).get(user_id)
+    if user is None or not user.is_active:
+        raise AuthenticationError("Invalid or expired token")
+    return user
+
+
+CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+def get_auth_service(session: DbSessionDep, settings: SettingsDep) -> AuthService:
+    return AuthService(session, settings)
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+
+
+def get_document_service(session: DbSessionDep, container: ContainerDep) -> DocumentService:
+    return DocumentService(session, container.storage, container.settings)
+
+
+DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]

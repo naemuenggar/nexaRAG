@@ -4,8 +4,8 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 1 of 10 (project setup and infrastructure).** The API currently serves
-> health endpoints only. See [docs/architecture.md](docs/architecture.md) for the full design
+> **Status: Milestone 2 of 10 (PDF ingestion and parsing).** Users can register, upload PDFs
+> and read back the parsed text of each page. Retrieval and answering come next. See [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
 ## Quick start (local)
@@ -18,6 +18,7 @@ docker compose up -d            # Postgres, Redis, Qdrant
 uv sync                         # creates .venv from uv.lock
 uv run alembic upgrade head     # apply database migrations
 uv run uvicorn --factory rag_platform.main:app_factory --reload
+uv run python -m rag_platform.ingestion.worker   # in a second terminal: processes uploads
 ```
 
 URLs in `.env.example` use `127.0.0.1` rather than `localhost`: on Windows, `localhost` tries
@@ -25,7 +26,7 @@ IPv6 first and each refused attempt costs about two seconds before falling back.
 
 Open http://127.0.0.1:8000/docs (disabled when `ENVIRONMENT=production`).
 
-To run the API in Docker as well: `docker compose --profile app up -d --build`
+To run the API and worker in Docker as well: `docker compose --profile app up -d --build`
 (runs migrations in a one-shot `migrate` container first).
 
 ## Checks
@@ -38,27 +39,52 @@ uv run pytest                    # unit tests, no services needed
 uv run pytest -m integration     # needs `docker compose up -d`
 ```
 
-## API (Milestone 1)
+## API
 
-| Method | Path            | Description                                                     |
-|--------|-----------------|-----------------------------------------------------------------|
-| GET    | `/health/live`  | Process is up. Never checks dependencies.                       |
-| GET    | `/health/ready` | Postgres, Redis and Qdrant answer within the timeout, else 503. |
+| Method | Path                         | Auth | Description                                              |
+|--------|------------------------------|------|----------------------------------------------------------|
+| GET    | `/health/live`               | no   | Process is up. Never checks dependencies.                |
+| GET    | `/health/ready`              | no   | Postgres, Redis and Qdrant answer in time, else 503.     |
+| POST   | `/auth/register`             | no   | Create an account (password 12 to 128 characters).       |
+| POST   | `/auth/login`                | no   | Returns a bearer token.                                  |
+| GET    | `/auth/me`                   | yes  | The current user.                                        |
+| POST   | `/documents`                 | yes  | Upload a PDF (multipart field `file`). Returns 202.      |
+| GET    | `/documents`                 | yes  | Your documents, newest first (`limit`, `offset`).        |
+| GET    | `/documents/{id}`            | yes  | Status, page count, latest ingestion job.                |
+| GET    | `/documents/{id}/pages`      | yes  | Cleaned text per page (`limit`, `offset`).               |
+| DELETE | `/documents/{id}`            | yes  | Delete the document, its pages and the stored file.      |
+
+Documents belong to the uploader. Another user's document id answers 404, exactly like an id
+that does not exist.
 
 ```bash
-curl -s http://127.0.0.1:8000/health/ready
+curl -s -X POST http://127.0.0.1:8000/auth/register -H "Content-Type: application/json"   -d '{"email": "ana@example.com", "password": "a-long-enough-password"}'
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json"   -d '{"email": "ana@example.com", "password": "a-long-enough-password"}' | jq -r .access_token)
+curl -s -X POST http://127.0.0.1:8000/documents -H "Authorization: Bearer $TOKEN" -F "file=@report.pdf"
 ```
 
 ```json
 {
-  "status": "ready",
-  "components": {
-    "postgres": {"healthy": true, "latency_ms": 3.1, "error": null},
-    "redis": {"healthy": true, "latency_ms": 1.2, "error": null},
-    "qdrant": {"healthy": true, "latency_ms": 4.8, "error": null}
-  }
+  "id": "7522735b-5394-4347-abe3-3841ac329368",
+  "filename": "report.pdf",
+  "size_bytes": 1043,
+  "content_sha256": "9c1f...",
+  "page_count": null,
+  "status": "pending",
+  "error_message": null,
+  "created_at": "2026-10-31T11:18:58.990Z",
+  "updated_at": "2026-10-31T11:18:58.990Z",
+  "latest_job": {"id": "8838...", "status": "queued", "attempts": 0, "started_at": null, "finished_at": null}
 }
 ```
+
+Once the worker has run, `GET /documents/{id}` shows `"status": "ready"` and `"page_count": 3`,
+and `GET /documents/{id}/pages` returns `[{"page_number": 1, "text": "...", "char_count": 20}, ...]`.
+
+Upload errors: `400 empty_file`, `409 duplicate_document` (with `details.document_id` of your
+existing copy), `413 payload_too_large`, `415 unsupported_media_type` (checked by file signature,
+not by extension or Content-Type). PDFs that are scanned (no text), damaged or password-protected
+are accepted, then end as `"status": "failed"` with a readable `error_message`.
 
 Every error response uses one envelope, and every response carries `X-Request-ID`:
 

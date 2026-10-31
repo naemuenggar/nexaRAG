@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from rag_platform.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -17,6 +17,8 @@ class JobStatus(StrEnum):
 
 class IngestionJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "ingestion_jobs"
+    # Workers poll for the oldest claimable job.
+    __table_args__ = (Index("ix_ingestion_jobs_status_created_at", "status", "created_at"),)
 
     document_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False

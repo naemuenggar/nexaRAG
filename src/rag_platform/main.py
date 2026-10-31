@@ -7,12 +7,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from rag_platform import __version__
+from rag_platform.api.body_limit import BodySizeLimitMiddleware
 from rag_platform.api.middleware import RequestContextMiddleware
-from rag_platform.api.routes import health
+from rag_platform.api.routes import auth, documents, health
 from rag_platform.container import Container
 from rag_platform.core.config import Settings, get_settings
 from rag_platform.core.errors import register_error_handlers
 from rag_platform.core.logging import configure_logging, get_logger
+
+# Room for multipart boundaries and part headers on top of the file itself.
+MULTIPART_OVERHEAD_BYTES = 64 * 1024
 
 
 def create_app(settings: Settings | None = None, container: Container | None = None) -> FastAPI:
@@ -24,6 +28,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.container = container or Container.from_settings(settings)
+        await app.state.container.storage.ensure_ready()
         logger.info("startup", environment=settings.environment.value, version=__version__)
         try:
             yield
@@ -49,10 +54,17 @@ def create_app(settings: Settings | None = None, container: Container | None = N
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
         )
+    # Registered before RequestContextMiddleware so it runs inside it (413s get a request id).
+    app.add_middleware(
+        BodySizeLimitMiddleware,
+        max_body_bytes=settings.max_upload_size_bytes + MULTIPART_OVERHEAD_BYTES,
+    )
     app.add_middleware(RequestContextMiddleware)
     register_error_handlers(app)
 
     app.include_router(health.router)
+    app.include_router(auth.router)
+    app.include_router(documents.router)
     return app
 
 

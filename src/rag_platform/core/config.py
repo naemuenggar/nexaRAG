@@ -5,6 +5,7 @@ Secrets have no defaults: the app refuses to start if they are missing.
 
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,6 +47,14 @@ class Settings(BaseSettings):
 
     max_upload_size_mb: int = Field(default=50, ge=1, le=500)
     cors_allow_origins: list[str] = Field(default_factory=list)
+
+    storage_dir: Path = Path("data/uploads")
+    max_pdf_pages: int = Field(default=2000, ge=1, le=100_000)
+
+    ingestion_poll_interval_seconds: float = Field(default=1.0, gt=0, le=60)
+    ingestion_max_attempts: int = Field(default=3, ge=1, le=20)
+    # A RUNNING job whose worker has not finished within this window is assumed dead and retried.
+    ingestion_lease_seconds: int = Field(default=600, ge=10, le=24 * 3600)
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 

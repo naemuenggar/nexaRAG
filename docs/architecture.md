@@ -20,10 +20,10 @@ later milestones; everything else exists in the code today.
 flowchart LR
     client[Client] -->|JWT| api[FastAPI API]
     api --> pg[(PostgreSQL<br/>users, documents,<br/>chunks, jobs, chats)]
-    api --> redis[(Redis<br/>rate limits, job queue)]
+    api --> redis[(Redis<br/>rate limits, cache)]
     api --> qdrant[(Qdrant<br/>chunk vectors)]
-    api -->|enqueue| redis
-    worker[Ingestion worker] -->|dequeue| redis
+    api -->|enqueue job row| pg
+    worker[Ingestion worker] -->|claim job<br/>SKIP LOCKED| pg
     worker --> store[(File storage<br/>uploaded PDFs)]
     worker --> pg
     worker --> qdrant
@@ -38,10 +38,12 @@ ids → dense search (Qdrant, filtered by `owner_id`/`document_id` payload) and 
 cross-encoder rerank top-N → evidence sufficiency check → grounded generation with numbered
 sources → citation validation → persist turn → respond.
 
-**Ingestion path** *(planned)*: upload → validate type (magic bytes, not just extension) and
-size → SHA-256 dedupe per owner → store file → `documents` row (`pending`) + `ingestion_jobs`
-row → enqueue → worker parses page by page → clean → chunk with page spans → embed → upsert
-to Qdrant and Postgres → `ready` (or `failed` with a safe error message).
+**Ingestion path**: upload streamed to a temp file while the size limit and SHA-256 are
+computed → PDF signature check → per-owner dedupe → `documents` row (`pending`) and
+`ingestion_jobs` row in one transaction → file moved into place → commit. The worker claims the
+job, parses page by page in a thread, cleans the text and stores one `document_pages` row per
+page → `ready`, or `failed` with a message safe to show the owner. *(M3 adds: chunk with page
+spans → embed → upsert to Qdrant.)*
 
 ## 3. Code layout
 
@@ -54,10 +56,10 @@ src/rag_platform/
   db/                  SQLAlchemy base, session factory, ORM models
   infrastructure/      clients and probes for Postgres, Redis, Qdrant
   # added in later milestones, one package per concern:
-  auth/                password hashing, JWT, current-user dependency         (M7)
-  repositories/        all SQL lives here; every query takes the caller's id  (M2+)
-  services/            use-case orchestration (upload, ask, conversations)    (M2+)
-  ingestion/           PDF parsing, cleaning, chunking, worker                (M2-M3)
+  auth/                Argon2id password hashing, JWT access tokens
+  repositories/        all SQL lives here; document queries take the owner's id
+  services/            use-case orchestration (auth, documents; later ask, chats)
+  ingestion/           PDF validation + parsing, text cleaning, worker (chunking in M3)
   embeddings/          embedding model interface + sentence-transformers      (M3)
   retrieval/           dense, BM25, fusion, filters                           (M4-M5)
   reranking/           cross-encoder interface + implementation               (M5)
@@ -80,6 +82,9 @@ never touch SQL or clients directly; services never import FastAPI.
 | Request tracing | Pure-ASGI middleware sets/propagates `X-Request-ID`, binds it to every log line | Works with streaming responses; caller-supplied ids are accepted only if they match `[A-Za-z0-9._-]{1,128}`. |
 | Health | `/health/live` (no dependencies) and `/health/ready` (all dependencies, per-probe timeout, 503 on failure) | Orchestrators don't restart healthy processes during a database blip; readiness exposes only the error type. |
 | Database | Async SQLAlchemy 2 + asyncpg, Alembic with deterministic constraint names | Typed models, async I/O, stable autogenerate diffs. A test asserts migrations equal the models. |
+| Job queue | PostgreSQL table claimed with `FOR UPDATE SKIP LOCKED`, lease + bounded retries | The job is created in the same transaction as the document, so no upload can lose its job (a Redis queue can't give that). One fewer moving part than arq/Celery; throughput needs are small. |
+| Upload size | Pure-ASGI body limit (declared and streamed bytes) plus a check while staging | Starlette spools multipart files of any size to disk; the limit stops a request before that. |
+| Auth timing | Brought forward from M7: register/login/JWT and the current-user dependency | Uploads need an owner, and a fake "user id header" would be a security hole to remove later. M7 adds conversations and the remaining authorization tests. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -91,6 +96,9 @@ never touch SQL or clients directly; services never import FastAPI.
   storage_path, page_count, status (`pending|processing|ready|failed`), error_message, timestamps.
 * `ingestion_jobs`: id, document_id → documents (cascade), status
   (`queued|running|succeeded|failed`), attempts, error_message, started_at, finished_at, timestamps.
+  Index on (status, created_at) for claiming.
+* `document_pages`: (document_id, page_number) primary key, cleaned text, char_count. Blank
+  pages are kept so page numbers always match the PDF.
 
 Planned: `chunks` (document_id, page_start, page_end, ordinal, text, token_count; source for BM25
 and citation snippets) in M3, `conversations` and `messages` (with stored citations and token
@@ -113,6 +121,12 @@ usage) in M7, optional `document_shares` if sharing is required.
 
 ## 7. Assumptions (please correct any that are wrong)
 
+Known limitations so far: there is no OCR, so scanned PDFs without a text layer fail with a
+clear message. Parsing runs in a thread with a page limit, but a pathological PDF can still
+occupy a worker for a long time because a Python thread cannot be killed; a process pool with
+hard timeouts is the fix if this shows up in practice.
+
+
 1. **Ownership model:** documents are private to the uploader; admins can manage users but do
    not read other users' documents. Sharing can be added later as an explicit ACL table.
 2. **Auth:** built-in email/password with JWT access tokens (no external IdP for now).
@@ -121,8 +135,7 @@ usage) in M7, optional `document_shares` if sharing is required.
    deterministic fake for tests. A real API key is needed to measure answer-quality metrics.
 4. **Embeddings / reranker defaults:** `BAAI/bge-small-en-v1.5` (384-d) and
    `cross-encoder/ms-marco-MiniLM-L-6-v2`, chosen to run on CPU; both configurable.
-5. **Background jobs:** a small Redis-backed worker process (arq) rather than Celery, which is
-   heavier than this workload needs.
+5. **Background jobs:** a worker process polling a PostgreSQL job table (see section 4).
 6. **File storage:** local volume for now behind a small storage interface (S3 later).
 7. **Language:** English-first models; multilingual models (e.g. for Indonesian documents) are a
    config change, evaluated separately.
@@ -131,8 +144,8 @@ usage) in M7, optional `document_shares` if sharing is required.
 
 ## 8. Milestones
 
-1. Project setup and infrastructure **(this milestone)**
-2. PDF ingestion and parsing
+1. Project setup and infrastructure (done)
+2. PDF ingestion and parsing (done)
 3. Chunking, embeddings and Qdrant indexing
 4. Dense and BM25 retrieval
 5. Hybrid search and reranking

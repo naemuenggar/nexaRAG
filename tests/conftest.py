@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -31,8 +32,8 @@ async def healthy_probe() -> None:
 
 
 @pytest.fixture
-def settings() -> Settings:
-    return make_settings()
+def settings(tmp_path: Path) -> Settings:
+    return make_settings(storage_dir=tmp_path / "uploads")
 
 
 @pytest.fixture

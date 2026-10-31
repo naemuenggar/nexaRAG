@@ -17,9 +17,12 @@ class AppError(Exception):
     status_code: int = status.HTTP_400_BAD_REQUEST
     code: str = "bad_request"
 
-    def __init__(self, message: str, *, code: str | None = None) -> None:
+    def __init__(
+        self, message: str, *, code: str | None = None, details: dict[str, Any] | None = None
+    ) -> None:
         super().__init__(message)
         self.message = message
+        self.details = details
         if code is not None:
             self.code = code
 
@@ -73,8 +76,12 @@ def error_body(code: str, message: str, request: Request, **extra: Any) -> dict[
 async def _app_error_handler(request: Request, exc: Exception) -> JSONResponse:
     if not isinstance(exc, AppError):
         raise exc
+    extra = {"details": exc.details} if exc.details is not None else {}
+    headers = {"WWW-Authenticate": "Bearer"} if isinstance(exc, AuthenticationError) else None
     return JSONResponse(
-        status_code=exc.status_code, content=error_body(exc.code, exc.message, request)
+        status_code=exc.status_code,
+        content=error_body(exc.code, exc.message, request, **extra),
+        headers=headers,
     )
 
 
