@@ -16,6 +16,7 @@ from rag_platform.repositories.users import UserRepository
 from rag_platform.retrieval.dense import DenseRetriever
 from rag_platform.services.ask import AskService
 from rag_platform.services.auth import AuthService
+from rag_platform.services.conversations import ConversationService
 from rag_platform.services.documents import DocumentService
 from rag_platform.services.search import SearchService
 
@@ -99,3 +100,12 @@ def get_ask_service(search: SearchServiceDep, container: ContainerDep) -> AskSer
 
 
 AskServiceDep = Annotated[AskService, Depends(get_ask_service)]
+
+
+def get_conversation_service(
+    session: DbSessionDep, ask: AskServiceDep, settings: SettingsDep
+) -> ConversationService:
+    return ConversationService(session, ask, settings)
+
+
+ConversationServiceDep = Annotated[ConversationService, Depends(get_conversation_service)]

@@ -56,10 +56,19 @@ def render_sources(sources: Sequence[PromptSource]) -> str:
     return "<sources>\n" + "\n".join(parts) + "\n</sources>"
 
 
-def build_messages(question: str, sources: Sequence[PromptSource]) -> list[ChatMessage]:
+def build_messages(
+    question: str,
+    sources: Sequence[PromptSource],
+    history: Sequence[ChatMessage] = (),
+) -> list[ChatMessage]:
+    """System rules, then earlier turns of the conversation, then the sources and question.
+
+    Sources are attached to the current question only; earlier answers are plain text.
+    """
     user = (
         f"{render_sources(sources)}\n\n"
         f"<question>\n{escape(question)}\n</question>\n\n"
         "Answer the question using only the sources above, citing them as [n]."
     )
-    return [ChatMessage("system", SYSTEM_PROMPT), ChatMessage("user", user)]
+    turns = [m for m in history if m.role in ("user", "assistant")]
+    return [ChatMessage("system", SYSTEM_PROMPT), *turns, ChatMessage("user", user)]

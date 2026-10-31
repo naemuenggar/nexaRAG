@@ -8,18 +8,15 @@ from rag_platform.retrieval.types import ScoredChunk, SearchScope
 
 
 def scope_filter(scope: SearchScope) -> qm.Filter:
-    """The owner condition is always present; it is what keeps users' vectors apart."""
-    must: list[qm.Condition] = [
-        qm.FieldCondition(key="owner_id", match=qm.MatchValue(value=str(scope.owner_id)))
-    ]
-    if scope.document_ids is not None:
-        must.append(
+    """Only the resolved, readable documents; there is no unrestricted search."""
+    return qm.Filter(
+        must=[
             qm.FieldCondition(
                 key="document_id",
                 match=qm.MatchAny(any=sorted(str(d) for d in scope.document_ids)),
             )
-        )
-    return qm.Filter(must=must)
+        ]
+    )
 
 
 class DenseRetriever:
@@ -29,7 +26,7 @@ class DenseRetriever:
         self._embedder = embedder
 
     async def search(self, query: str, scope: SearchScope, top_k: int) -> list[ScoredChunk]:
-        if scope.document_ids is not None and not scope.document_ids:
+        if not scope.document_ids:
             return []
         vector = await self._embedder.embed_query(query)
         response = await self._client.query_points(

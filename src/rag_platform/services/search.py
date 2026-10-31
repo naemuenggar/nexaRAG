@@ -82,26 +82,25 @@ class SearchService:
         self._settings = settings
 
     async def resolve_scope(
-        self, owner_id: uuid.UUID, document_filter: DocumentFilter | None = None
+        self, user_id: uuid.UUID, document_filter: DocumentFilter | None = None
     ) -> SearchScope:
         flt = document_filter or DocumentFilter()
         if flt.document_ids is not None:
             requested = set(flt.document_ids)
-            accessible = await self._chunks.owned_ready_document_ids(owner_id, list(requested))
-            if accessible != requested:
-                # Same message for "not yours" and "doesn't exist"; also covers "not ready yet".
+            readable = await self._chunks.searchable_document_ids(
+                user_id, restrict_to=list(requested)
+            )
+            if readable != requested:
+                # Same answer for "not yours", "doesn't exist" and "not ready yet".
                 raise NotFoundError("Document not found or not ready for search")
-        if flt.document_ids is None and not flt.has_metadata:
-            return SearchScope(owner_id)
-        # Metadata conditions narrow the scope; matching nothing is a valid, empty search.
-        matching = await self._chunks.filter_ready_document_ids(
-            owner_id,
+        matching = await self._chunks.searchable_document_ids(
+            user_id,
             restrict_to=flt.document_ids,
             filename_contains=flt.filename_contains,
             uploaded_after=flt.uploaded_after,
             uploaded_before=flt.uploaded_before,
         )
-        return SearchScope(owner_id, frozenset(matching))
+        return SearchScope(user_id, frozenset(matching))
 
     async def search(
         self,
@@ -124,14 +123,14 @@ class SearchService:
     ) -> list[SearchHit]:
         if mode is RetrievalMode.DENSE:
             dense = await self._dense.search(query, scope, top_k)
-            return await self._hydrate(scope.owner_id, _single("dense", dense))
+            return await self._hydrate(scope.user_id, _single("dense", dense))
         if mode is RetrievalMode.SPARSE:
             sparse = await self._sparse.search(query, scope, top_k)
-            return await self._hydrate(scope.owner_id, _single("bm25", sparse))
+            return await self._hydrate(scope.user_id, _single("bm25", sparse))
 
         fused = await self._hybrid(query, scope)
         if mode is RetrievalMode.HYBRID:
-            return await self._hydrate(scope.owner_id, fused[:top_k])
+            return await self._hydrate(scope.user_id, fused[:top_k])
         return await self._rerank(query, scope, fused, top_k)
 
     async def _hybrid(self, query: str, scope: SearchScope) -> list[_Candidate]:
@@ -151,7 +150,7 @@ class SearchService:
     async def _rerank(
         self, query: str, scope: SearchScope, fused: list[_Candidate], top_k: int
     ) -> list[SearchHit]:
-        pool = await self._hydrate(scope.owner_id, fused[: self._settings.rerank_candidates])
+        pool = await self._hydrate(scope.user_id, fused[: self._settings.rerank_candidates])
         if not pool:
             return []
         scores = await self._reranker.score(query, [h.chunk.text for h in pool])

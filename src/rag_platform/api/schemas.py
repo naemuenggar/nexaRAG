@@ -57,6 +57,8 @@ class DocumentOut(BaseModel):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+    # "owner" for your own documents, "shared" for ones another user gave you read access to.
+    access: Literal["owner", "shared"] = "owner"
 
 
 class DocumentDetail(DocumentOut):
@@ -68,6 +70,16 @@ class DocumentList(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class ShareRequest(BaseModel):
+    email: EmailStr
+
+
+class ShareOut(BaseModel):
+    user_id: uuid.UUID
+    email: str
+    created_at: datetime
 
 
 class PageOut(BaseModel):
@@ -153,4 +165,60 @@ class AskResponse(BaseModel):
     sources_considered: int
     suspicious_sources: int
     usage: UsageOut | None
+    latency: LatencyOut
+
+
+class ConversationCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class ConversationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ConversationList(BaseModel):
+    items: list[ConversationOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    role: Literal["user", "assistant"]
+    content: str
+    answered: bool | None
+    refusal_reason: str | None
+    citations: list[CitationOut] | None
+    usage: UsageOut | None
+    created_at: datetime
+
+
+class ConversationDetail(ConversationOut):
+    messages: list[MessageOut]
+
+
+class MessageCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=2000)
+    filters: SearchFilters | None = None
+
+
+class MessageExchange(BaseModel):
+    """The stored question and answer, plus this answer's latency and source counts."""
+
+    question: MessageOut
+    answer: MessageOut
+    sources_considered: int
+    suspicious_sources: int
     latency: LatencyOut

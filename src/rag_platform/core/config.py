@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     # Treat an answer that cites nothing as unsupported and return the refusal instead.
     ask_require_citations: bool = True
 
+    # Earlier messages of a conversation sent to the model with each new question.
+    conversation_history_messages: int = Field(default=6, ge=0, le=50)
+
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = Field(default=60, ge=1, le=24 * 60)

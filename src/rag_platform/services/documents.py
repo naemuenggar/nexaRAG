@@ -1,4 +1,7 @@
-"""Document use cases: upload, list, inspect, delete. Every operation is scoped to one owner."""
+"""Document use cases: upload, list, inspect, delete, share.
+
+Reading needs ownership or a share; deleting and sharing need ownership.
+"""
 
 import asyncio
 import hashlib
@@ -20,14 +23,23 @@ from rag_platform.core.errors import (
     ConflictError,
     NotFoundError,
     PayloadTooLargeError,
+    PermissionDeniedError,
     UnsupportedMediaTypeError,
 )
-from rag_platform.db.models import Document, DocumentPage, DocumentStatus, IngestionJob
+from rag_platform.db.models import (
+    Document,
+    DocumentPage,
+    DocumentShare,
+    DocumentStatus,
+    IngestionJob,
+)
 from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex
 from rag_platform.ingestion.pdf import MAGIC_SEARCH_WINDOW, looks_like_pdf
 from rag_platform.repositories.documents import DocumentRepository
 from rag_platform.repositories.jobs import JobRepository
+from rag_platform.repositories.users import UserRepository
+from rag_platform.services.auth import normalise_email
 
 logger = structlog.stdlib.get_logger(__name__)
 
@@ -78,6 +90,7 @@ class DocumentService:
         self._index = vector_index
         self._documents = DocumentRepository(session)
         self._jobs = JobRepository(session)
+        self._users = UserRepository(session)
         self._storage = storage
         self._settings = settings
 
@@ -155,25 +168,25 @@ class DocumentService:
         logger.info("document_uploaded", document_id=str(document_id), size_bytes=staged.size_bytes)
         return DocumentWithJob(document, job)
 
-    async def get(self, owner_id: uuid.UUID, document_id: uuid.UUID) -> DocumentWithJob:
-        document = await self._get_owned(owner_id, document_id)
+    async def get(self, user_id: uuid.UUID, document_id: uuid.UUID) -> DocumentWithJob:
+        document = await self._get_readable(user_id, document_id)
         return DocumentWithJob(document, await self._jobs.latest_for_document(document.id))
 
     async def list(
-        self, owner_id: uuid.UUID, *, limit: int, offset: int
+        self, user_id: uuid.UUID, *, owned: bool | None = None, limit: int, offset: int
     ) -> tuple[Sequence[Document], int]:
-        return await self._documents.list_owned(owner_id, limit=limit, offset=offset)
+        return await self._documents.list_readable(user_id, owned=owned, limit=limit, offset=offset)
 
     async def pages(
-        self, owner_id: uuid.UUID, document_id: uuid.UUID, *, limit: int, offset: int
+        self, user_id: uuid.UUID, document_id: uuid.UUID, *, limit: int, offset: int
     ) -> Sequence[DocumentPage]:
-        await self._get_owned(owner_id, document_id)
-        return await self._documents.list_pages(owner_id, document_id, limit=limit, offset=offset)
+        await self._get_readable(user_id, document_id)
+        return await self._documents.list_pages(user_id, document_id, limit=limit, offset=offset)
 
-    async def delete(self, owner_id: uuid.UUID, document_id: uuid.UUID) -> None:
-        document = await self._get_owned(owner_id, document_id)
+    async def delete(self, user_id: uuid.UUID, document_id: uuid.UUID) -> None:
+        document = await self._get_owned(user_id, document_id)
         key = document.storage_path
-        await self._documents.delete(document)  # pages, chunks and jobs cascade
+        await self._documents.delete(document)  # pages, chunks, jobs and shares cascade
         await self._session.commit()
         await self._storage.delete(key)
         try:
@@ -184,11 +197,47 @@ class DocumentService:
             logger.exception("vector_delete_failed", document_id=str(document_id))
         logger.info("document_deleted", document_id=str(document_id))
 
-    async def _get_owned(self, owner_id: uuid.UUID, document_id: uuid.UUID) -> Document:
-        document = await self._documents.get_owned(owner_id, document_id)
+    async def list_shares(
+        self, user_id: uuid.UUID, document_id: uuid.UUID
+    ) -> Sequence[tuple[DocumentShare, str]]:
+        await self._get_owned(user_id, document_id)
+        return await self._documents.list_shares(document_id)
+
+    async def share(
+        self, user_id: uuid.UUID, document_id: uuid.UUID, recipient_email: str
+    ) -> tuple[DocumentShare, str]:
+        await self._get_owned(user_id, document_id)
+        recipient = await self._users.get_by_email(normalise_email(recipient_email))
+        if recipient is None or not recipient.is_active:
+            raise NotFoundError("No active user with that email", code="user_not_found")
+        if recipient.id == user_id:
+            raise AppError("You already own this document", code="cannot_share_with_self")
+        share = await self._documents.add_share(document_id, recipient.id)
+        await self._session.commit()
+        logger.info("document_shared", document_id=str(document_id), recipient=str(recipient.id))
+        return share, recipient.email
+
+    async def unshare(
+        self, user_id: uuid.UUID, document_id: uuid.UUID, recipient_id: uuid.UUID
+    ) -> None:
+        await self._get_owned(user_id, document_id)
+        if not await self._documents.remove_share(document_id, recipient_id):
+            raise NotFoundError("This document is not shared with that user")
+        await self._session.commit()
+        logger.info("document_unshared", document_id=str(document_id), recipient=str(recipient_id))
+
+    async def _get_readable(self, user_id: uuid.UUID, document_id: uuid.UUID) -> Document:
+        document = await self._documents.get_readable(user_id, document_id)
         if document is None:
-            # Same answer whether it doesn't exist or belongs to someone else: no existence leak.
+            # Same answer whether it doesn't exist or isn't readable: no existence leak.
             raise NotFoundError("Document not found")
+        return document
+
+    async def _get_owned(self, user_id: uuid.UUID, document_id: uuid.UUID) -> Document:
+        document = await self._get_readable(user_id, document_id)
+        if document.owner_id != user_id:
+            # They can already read it, so admitting it exists leaks nothing.
+            raise PermissionDeniedError("Only the document's owner can do this")
         return document
 
 

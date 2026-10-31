@@ -101,6 +101,8 @@ never touch SQL or clients directly; services never import FastAPI.
 | Citation checks | `[n]` markers are kept only if `n` was provided; an answer with no valid citation is withheld and replaced by the refusal (`ASK_REQUIRE_CITATIONS`) | The model cannot cite unseen documents, and uncited claims never reach the user. Snippets are the source sentence that best matches the citing sentence. |
 | Prompt injection | Structural isolation plus a regex detector that marks suspicious sources in the prompt and counts them in the response | Detection alone is bypassable; isolation alone gives no signal. Together they make attempts visible without dropping legitimate documents. |
 | Orchestration | A plain async pipeline (retrieve → check → generate → verify), not LangGraph | The flow is linear with two early exits. A graph framework would add a dependency and indirection without adding capability; it becomes worthwhile if multi-step agentic retrieval is added. |
+| Sharing | Read-only grants by owner, one row per (document, user); BM25 indexes are per user over all readable documents, with a fingerprint that hashes the exact document id set | Covers team use without roles or groups. The digest makes the cache invalidate on any share change, not just on uploads. |
+| Conversations | Turns stored with the citations and usage the user saw; the last 6 messages are sent as context; retrieval uses the previous question plus the current one | Follow-ups ("and in 2023?") need context both for retrieval and for the model. Old `[n]` markers are stripped from history so they can't be confused with the new sources. A failed turn stores nothing. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -120,14 +122,19 @@ never touch SQL or clients directly; services never import FastAPI.
   ordinal (unique per document), page_start, page_end, text, word_count. Source for BM25 and
   citation snippets.
 
-Planned: `conversations` and `messages` (with stored citations and token
-usage) in M7, optional `document_shares` if sharing is required.
+* `document_shares`: (document_id, user_id) primary key, created_at. Cascade on either side.
+* `conversations`: id, owner_id, title, timestamps. `messages`: id, conversation_id, role,
+  content, answered, refusal_reason, citations (JSONB), usage (JSONB), timestamps.
 
 ## 6. Security model
 
-* **Authorization lives in the data access layer.** Every repository and retrieval call takes the
-  authenticated user and filters by accessible document ids, both in SQL and as a Qdrant payload
-  filter. There is no "unfiltered search" function to call by mistake.
+* **Authorization lives in the data access layer.** `repositories/access.py` is the only
+  definition of "readable" (owned, or shared via `document_shares`). Every document, page,
+  chunk and search query is built from it. Search resolves the readable, ready document ids in
+  Postgres first; Qdrant and BM25 are then restricted to exactly that set, so there is no
+  "unfiltered search" to call by mistake, and a revoked share stops matching immediately.
+* **404 vs 403.** A document you can't read answers 404 (its existence is not revealed). A
+  document you can read but don't own answers 403 to owner-only actions (delete, share).
 * **Prompt injection.** Retrieved text is placed in a delimited, clearly labelled data section of
   the user turn, never in the system prompt; the system prompt instructs the model to treat it as
   untrusted quotes. Answers are post-checked: every citation must refer to a passage that was
@@ -149,8 +156,8 @@ sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer i
 (stopwords, no stemming).
 
 
-1. **Ownership model:** documents are private to the uploader; admins can manage users but do
-   not read other users' documents. Sharing can be added later as an explicit ACL table.
+1. **Ownership model:** documents are private to the uploader unless the owner shares read access
+   with specific users. There are no groups or admin read-all access.
 2. **Auth:** built-in email/password with JWT access tokens (no external IdP for now).
 3. **LLM provider:** abstracted behind an interface. The default implementation will target an
    OpenAI-compatible HTTP API (works with OpenAI, vLLM, Ollama, LiteLLM, etc.) plus a
@@ -172,7 +179,7 @@ sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer i
 4. Dense and BM25 retrieval (done)
 5. Hybrid search and reranking (done)
 6. Grounded LLM generation and citations (done)
-7. Conversation history and multi-user authorization
+7. Conversation history and multi-user authorization (done)
 8. Evaluation and benchmarking
 9. Observability, security and performance
 10. Docker deployment, CI/CD and documentation

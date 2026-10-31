@@ -12,13 +12,14 @@ class RetrievalMode(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class SearchScope:
-    """Who is searching and, optionally, which of their documents to search.
+    """Who is searching and exactly which documents they may search.
 
-    ``document_ids`` must already be restricted to documents the owner may read.
+    ``document_ids`` is resolved from the database (owned or shared, ready, matching filters)
+    before retrieval; retrievers never widen it.
     """
 
-    owner_id: uuid.UUID
-    document_ids: frozenset[uuid.UUID] | None = None
+    user_id: uuid.UUID
+    document_ids: frozenset[uuid.UUID]
 
 
 @dataclass(frozen=True, slots=True)

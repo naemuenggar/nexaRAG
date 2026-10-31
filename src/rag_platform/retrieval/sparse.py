@@ -1,6 +1,7 @@
 """BM25 retrieval over the caller's own chunks.
 
-Each owner gets a separate index, so term statistics never mix users' documents. Indexes are
+Each user gets a separate index over the documents they may read, so term statistics never
+include documents they can't see. Indexes are
 built from PostgreSQL on first use and cached in-process; a cheap fingerprint query (document and
 chunk counts, last update) tells when a cached index is stale.
 """
@@ -32,22 +33,22 @@ class BM25IndexCache:
         self._locks: dict[uuid.UUID, asyncio.Lock] = {}
         self.builds = 0  # observable in tests and logs
 
-    async def get(self, owner_id: uuid.UUID, chunks: ChunkRepository) -> BM25Index:
-        fingerprint = await chunks.fingerprint(owner_id)
-        cached = self._entries.get(owner_id)
+    async def get(self, user_id: uuid.UUID, chunks: ChunkRepository) -> BM25Index:
+        fingerprint = await chunks.fingerprint(user_id)
+        cached = self._entries.get(user_id)
         if cached and cached[0] == fingerprint:
-            self._entries.move_to_end(owner_id)
+            self._entries.move_to_end(user_id)
             return cached[1]
-        lock = self._locks.setdefault(owner_id, asyncio.Lock())
+        lock = self._locks.setdefault(user_id, asyncio.Lock())
         async with lock:
-            cached = self._entries.get(owner_id)
+            cached = self._entries.get(user_id)
             if cached and cached[0] == fingerprint:
                 return cached[1]
-            rows = list(await chunks.corpus(owner_id))
+            rows = list(await chunks.corpus(user_id))
             index = await asyncio.to_thread(build_index, rows, k1=self._k1, b=self._b)
             self.builds += 1
-            self._entries[owner_id] = (fingerprint, index)
-            self._entries.move_to_end(owner_id)
+            self._entries[user_id] = (fingerprint, index)
+            self._entries.move_to_end(user_id)
             while len(self._entries) > self._max_owners:
                 evicted, _ = self._entries.popitem(last=False)
                 self._locks.pop(evicted, None)
@@ -60,12 +61,11 @@ class SparseRetriever:
         self._cache = cache
 
     async def search(self, query: str, scope: SearchScope, top_k: int) -> list[ScoredChunk]:
-        if scope.document_ids is not None and not scope.document_ids:
+        if not scope.document_ids:
             return []
         tokens = tokenize(query)
         if not tokens:
             return []
-        index = await self._cache.get(scope.owner_id, self._chunks)
-        allowed = set(scope.document_ids) if scope.document_ids is not None else None
-        hits = index.search(tokens, top_k, allowed_documents=allowed)
+        index = await self._cache.get(scope.user_id, self._chunks)
+        hits = index.search(tokens, top_k, allowed_documents=set(scope.document_ids))
         return [ScoredChunk(h.chunk_id, h.document_id, h.score) for h in hits]

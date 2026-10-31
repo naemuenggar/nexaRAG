@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from rag_platform import __version__
 from rag_platform.api.body_limit import BodySizeLimitMiddleware
 from rag_platform.api.middleware import RequestContextMiddleware
-from rag_platform.api.routes import ask, auth, documents, health, search
+from rag_platform.api.routes import ask, auth, conversations, documents, health, search
 from rag_platform.container import Container
 from rag_platform.core.config import Settings, get_settings
 from rag_platform.core.errors import register_error_handlers
@@ -73,6 +73,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     app.include_router(documents.router)
     app.include_router(search.router)
     app.include_router(ask.router)
+    app.include_router(conversations.router)
     return app
 
 

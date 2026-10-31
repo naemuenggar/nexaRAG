@@ -7,6 +7,7 @@ model declines or cites no valid source.
 
 import time
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -16,7 +17,7 @@ from rag_platform.core.config import Settings
 from rag_platform.core.errors import ServiceUnavailableError, UpstreamError
 from rag_platform.generation.citations import parse_answer, select_snippets
 from rag_platform.generation.injection import looks_like_injection
-from rag_platform.generation.llm import LLMError, LLMProvider
+from rag_platform.generation.llm import ChatMessage, LLMError, LLMProvider
 from rag_platform.generation.prompts import NO_ANSWER, PromptSource, build_messages
 from rag_platform.retrieval.types import RetrievalMode
 from rag_platform.services.search import DocumentFilter, SearchHit, SearchService
@@ -77,7 +78,11 @@ class AskService:
         *,
         top_k: int | None = None,
         document_filter: DocumentFilter | None = None,
+        history: Sequence[ChatMessage] = (),
+        retrieval_query: str | None = None,
     ) -> AskResult:
+        """``retrieval_query`` defaults to the question; conversations pass a query that also
+        carries the previous question, so follow-ups like "and in 2023?" find the right passages."""
         if self._llm is None:
             raise ServiceUnavailableError(
                 "Answer generation is not configured on this server", code="llm_not_configured"
@@ -86,7 +91,7 @@ class AskService:
         mode = self._settings.ask_retrieval_mode
         retrieved = await self._search.search(
             owner_id,
-            question,
+            retrieval_query or question,
             mode=mode,
             top_k=top_k or self._settings.ask_top_k,
             document_filter=document_filter,
@@ -116,7 +121,7 @@ class AskService:
         generation_started = time.perf_counter()
         try:
             result = await self._llm.complete(
-                build_messages(question, sources),
+                build_messages(question, sources, history),
                 max_tokens=self._settings.llm_max_tokens,
                 temperature=self._settings.llm_temperature,
             )

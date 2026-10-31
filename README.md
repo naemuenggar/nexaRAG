@@ -4,9 +4,9 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 6 of 10 (grounded generation and citations).** `POST /ask` answers from
-> your documents with verified citations (document, file, page, snippet), or says it doesn't
-> know. Conversations, evaluation and observability come next. See
+> **Status: Milestone 7 of 10 (conversations and multi-user authorization).** Grounded answers
+> with citations, multi-turn conversations with stored history, and read-only document sharing
+> between users. Evaluation, observability and deployment come next. See
 > [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
@@ -51,15 +51,26 @@ uv run pytest -m integration     # needs `docker compose up -d`
 | POST   | `/auth/login`                | no   | Returns a bearer token.                                  |
 | GET    | `/auth/me`                   | yes  | The current user.                                        |
 | POST   | `/documents`                 | yes  | Upload a PDF (multipart field `file`). Returns 202.      |
-| GET    | `/documents`                 | yes  | Your documents, newest first (`limit`, `offset`).        |
+| GET    | `/documents`                 | yes  | Readable documents, newest first (`ownership`=`all`/`owned`/`shared`). |
 | GET    | `/documents/{id}`            | yes  | Status, page count, latest ingestion job.                |
 | GET    | `/documents/{id}/pages`      | yes  | Cleaned text per page (`limit`, `offset`).               |
-| DELETE | `/documents/{id}`            | yes  | Delete the document, its pages and the stored file.      |
+| DELETE | `/documents/{id}`            | owner | Delete the document, its pages, chunks, vectors and file. |
+| GET    | `/documents/{id}/shares`     | owner | Who has read access.                                     |
+| POST   | `/documents/{id}/shares`     | owner | Share read access: `{"email": "..."}`.                   |
+| DELETE | `/documents/{id}/shares/{user_id}` | owner | Revoke read access.                                |
 | POST   | `/search`                    | yes  | Retrieve passages (`dense`, `sparse`, `hybrid`, `hybrid_rerank`). |
 | POST   | `/ask`                       | yes  | Grounded answer with citations, or an explicit refusal.  |
+| POST   | `/conversations`             | yes  | Start a conversation (optional `title`).                 |
+| GET    | `/conversations`             | yes  | Your conversations, latest first.                        |
+| GET    | `/conversations/{id}`        | yes  | The conversation with every stored turn and citation.    |
+| POST   | `/conversations/{id}/messages` | yes | Ask in context: earlier turns are sent to the model.    |
+| DELETE | `/conversations/{id}`        | yes  | Delete the conversation.                                 |
 
-Documents belong to the uploader. Another user's document id answers 404, exactly like an id
-that does not exist.
+Documents belong to the uploader, who can share read access with other users. Recipients can
+list, read, search and get answers from a shared document (`"access": "shared"`), but cannot
+delete or reshare it (403). For anyone else the document id answers 404, exactly like an id
+that does not exist. Revoking a share takes effect on the next request, including search.
+Conversations are always private to their owner.
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/auth/register -H "Content-Type: application/json"   -d '{"email": "ana@example.com", "password": "a-long-enough-password"}'
