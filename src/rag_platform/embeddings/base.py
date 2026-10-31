@@ -17,6 +17,9 @@ class Embedder(Protocol):
     @property
     def dimension(self) -> int: ...
 
+    async def warm_up(self) -> None:
+        """Load model weights now, so the first real request isn't slow."""
+
     async def embed_passages(self, texts: Sequence[str]) -> list[Vector]: ...
 
     async def embed_query(self, text: str) -> Vector: ...

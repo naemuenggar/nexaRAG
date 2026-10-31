@@ -66,10 +66,13 @@ services:
       REDIS_URL: redis://redis:6379/0
       QDRANT_URL: http://qdrant:6333
       STORAGE_DIR: /app/data/uploads
+      # Query embedding loads the same model as the worker; share its download cache.
+      HF_HOME: /app/data/hf-cache
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
       - uploads:/app/data/uploads
+      - hf-cache:/app/data/hf-cache
     depends_on:
       migrate:
         condition: service_completed_successfully

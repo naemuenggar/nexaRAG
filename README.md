@@ -4,9 +4,10 @@ Multi-user knowledge assistant: upload PDFs, ask questions, get answers grounded
 evidence with citations (document, filename, page, snippet), and an explicit "I don't know"
 when the documents don't contain the answer.
 
-> **Status: Milestone 3 of 10 (chunking, embeddings, Qdrant indexing).** Users can register and
-> upload PDFs; the worker parses them per page, splits them into chunks and indexes the chunks
-> in Qdrant. Search and answering come next. See [docs/architecture.md](docs/architecture.md) for the full design
+> **Status: Milestone 4 of 10 (dense and BM25 retrieval).** Users upload PDFs, the worker
+> chunks, embeds and indexes them, and `POST /search` retrieves passages by vector similarity or
+> BM25. Hybrid fusion, reranking and answer generation come next. See
+> [docs/architecture.md](docs/architecture.md) for the full design
 > and the milestone plan.
 
 ## Quick start (local)
@@ -54,6 +55,7 @@ uv run pytest -m integration     # needs `docker compose up -d`
 | GET    | `/documents/{id}`            | yes  | Status, page count, latest ingestion job.                |
 | GET    | `/documents/{id}/pages`      | yes  | Cleaned text per page (`limit`, `offset`).               |
 | DELETE | `/documents/{id}`            | yes  | Delete the document, its pages and the stored file.      |
+| POST   | `/search`                    | yes  | Retrieve passages: `mode` is `dense` or `sparse` (BM25). |
 
 Documents belong to the uploader. Another user's document id answers 404, exactly like an id
 that does not exist.
@@ -81,6 +83,35 @@ curl -s -X POST http://127.0.0.1:8000/documents -H "Authorization: Bearer $TOKEN
 
 Once the worker has run, `GET /documents/{id}` shows `"status": "ready"` and `"page_count": 3`,
 and `GET /documents/{id}/pages` returns `[{"page_number": 1, "text": "...", "char_count": 20}, ...]`.
+
+Search your own documents (optionally only some of them):
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/search -H "Authorization: Bearer $TOKEN"   -H "Content-Type: application/json"   -d '{"query": "How do PV modules turn light into power?", "mode": "dense", "top_k": 2}'
+```
+
+```json
+{
+  "mode": "dense",
+  "latency_ms": 38.7,
+  "results": [
+    {
+      "rank": 1,
+      "score": 0.764,
+      "chunk_id": "2b0c...",
+      "document_id": "7522...",
+      "filename": "energy.pdf",
+      "page_start": 1,
+      "page_end": 1,
+      "text": "Solar panels convert sunlight into electricity using photovoltaic cells."
+    }
+  ]
+}
+```
+
+(Output from the Docker stack with `bge-small-en-v1.5`. Note that the query shares no words with
+the passage.) `document_ids` restricts the search; naming a document that isn't yours, or isn't
+ready yet, returns 404.
 
 Upload errors: `400 empty_file`, `409 duplicate_document` (with `details.document_id` of your
 existing copy), `413 payload_too_large`, `415 unsupported_media_type` (checked by file signature,

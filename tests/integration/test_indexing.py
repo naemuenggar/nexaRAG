@@ -11,10 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from rag_platform.core.config import Settings
 from rag_platform.db.models import Chunk, IngestionJob, JobStatus
-from rag_platform.embeddings.sentence_transformers import SentenceTransformerEmbedder
+from rag_platform.embeddings.sentence_transformers import (
+    SentenceTransformerEmbedder,
+    create_embedder,
+)
 from rag_platform.infrastructure.qdrant import create_qdrant_client
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex, VectorIndexError
-from rag_platform.ingestion.worker import IngestionWorker, create_embedder
+from rag_platform.ingestion.worker import IngestionWorker
 from tests.fakes import HashingEmbedder
 from tests.integration.test_documents_api import drain, signup, upload
 from tests.pdf_factory import make_pdf

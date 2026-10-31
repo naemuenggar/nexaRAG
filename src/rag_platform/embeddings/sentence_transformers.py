@@ -5,6 +5,7 @@ import threading
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from rag_platform.core.config import Settings
 from rag_platform.embeddings.base import Vector
 
 if TYPE_CHECKING:
@@ -72,3 +73,12 @@ class SentenceTransformerEmbedder:
         )
         vectors: list[Vector] = embeddings.tolist()
         return vectors
+
+
+def create_embedder(settings: Settings) -> SentenceTransformerEmbedder:
+    return SentenceTransformerEmbedder(
+        settings.embedding_model,
+        device=settings.embedding_device,
+        batch_size=settings.embedding_batch_size,
+        query_prefix=settings.embedding_query_prefix,
+    )

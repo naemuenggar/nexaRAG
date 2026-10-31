@@ -55,6 +55,15 @@ class Settings(BaseSettings):
     embedding_batch_size: int = Field(default=32, ge=1, le=1024)
     # BGE models expect this instruction on queries (not on passages).
     embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+    # Load the model in the background at API startup instead of on the first search.
+    embedding_warm_up: bool = True
+
+    bm25_k1: float = Field(default=1.5, gt=0, le=10)
+    bm25_b: float = Field(default=0.75, ge=0, le=1)
+    # Per-process cache of per-user BM25 indexes (least recently used owners are evicted).
+    bm25_cache_max_owners: int = Field(default=64, ge=1, le=10_000)
+    search_default_top_k: int = Field(default=5, ge=1, le=100)
+    search_max_top_k: int = Field(default=50, ge=1, le=200)
 
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: str = "HS256"

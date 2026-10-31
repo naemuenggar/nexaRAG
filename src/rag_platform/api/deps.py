@@ -13,8 +13,10 @@ from rag_platform.core.config import Settings
 from rag_platform.core.errors import AuthenticationError
 from rag_platform.db.models import User
 from rag_platform.repositories.users import UserRepository
+from rag_platform.retrieval.dense import DenseRetriever
 from rag_platform.services.auth import AuthService
 from rag_platform.services.documents import DocumentService
+from rag_platform.services.search import SearchService
 
 
 def get_container(request: Request) -> Container:
@@ -77,3 +79,13 @@ def get_document_service(session: DbSessionDep, container: ContainerDep) -> Docu
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
+
+
+def get_search_service(session: DbSessionDep, container: ContainerDep) -> SearchService:
+    dense = DenseRetriever(
+        container.qdrant, container.settings.qdrant_collection, container.embedder
+    )
+    return SearchService(session, dense, container.bm25_cache)
+
+
+SearchServiceDep = Annotated[SearchService, Depends(get_search_service)]

@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
+from rag_platform.container import Container
 from rag_platform.core.config import Settings
 from rag_platform.db.session import create_session_factory
 from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
@@ -94,7 +95,10 @@ def app_settings(
 
 @pytest.fixture
 def api(app_settings: Settings) -> Iterator[TestClient]:
-    with TestClient(create_app(app_settings), raise_server_exceptions=False) as client:
+    container = Container.from_settings(app_settings)
+    # Same embedder as the test worker, so dense search matches what was indexed.
+    container.embedder = HashingEmbedder()
+    with TestClient(create_app(container=container), raise_server_exceptions=False) as client:
         yield client
 
 

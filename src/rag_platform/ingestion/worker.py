@@ -24,7 +24,7 @@ from rag_platform.core.logging import configure_logging
 from rag_platform.db.models import Chunk, Document, DocumentStatus, IngestionJob, JobStatus
 from rag_platform.db.session import create_engine, create_session_factory
 from rag_platform.embeddings.base import Embedder
-from rag_platform.embeddings.sentence_transformers import SentenceTransformerEmbedder
+from rag_platform.embeddings.sentence_transformers import create_embedder
 from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
 from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import ChunkPoint, QdrantVectorIndex
@@ -237,15 +237,6 @@ class IngestionWorker:
         job = await session.get(IngestionJob, claimed.job_id, with_for_update=True)
         document = await session.get(Document, claimed.document_id, with_for_update=True)
         return job, document
-
-
-def create_embedder(settings: Settings) -> SentenceTransformerEmbedder:
-    return SentenceTransformerEmbedder(
-        settings.embedding_model,
-        device=settings.embedding_device,
-        batch_size=settings.embedding_batch_size,
-        query_prefix=settings.embedding_query_prefix,
-    )
 
 
 async def main() -> None:

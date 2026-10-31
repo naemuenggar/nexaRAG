@@ -19,6 +19,7 @@ TEST_SETTINGS: dict[str, Any] = {
     "qdrant_url": "http://qdrant.invalid:6333",
     "jwt_secret": "x" * 40,
     "health_check_timeout_seconds": 0.2,
+    "embedding_warm_up": False,
 }
 
 

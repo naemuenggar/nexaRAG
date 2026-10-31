@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from rag_platform.db.models import DocumentStatus, JobStatus
+from rag_platform.retrieval.types import RetrievalMode
 
 
 class RegisterRequest(BaseModel):
@@ -75,3 +76,27 @@ class PageOut(BaseModel):
     page_number: int
     text: str
     char_count: int
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    mode: RetrievalMode = RetrievalMode.DENSE
+    top_k: int | None = Field(default=None, ge=1)
+    document_ids: list[uuid.UUID] | None = Field(default=None, min_length=1, max_length=500)
+
+
+class SearchHitOut(BaseModel):
+    rank: int
+    score: float
+    chunk_id: uuid.UUID
+    document_id: uuid.UUID
+    filename: str
+    page_start: int
+    page_end: int
+    text: str
+
+
+class SearchResponseOut(BaseModel):
+    mode: RetrievalMode
+    results: list[SearchHitOut]
+    latency_ms: float

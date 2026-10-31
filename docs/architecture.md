@@ -62,7 +62,7 @@ src/rag_platform/
   services/            use-case orchestration (auth, documents; later ask, chats)
   ingestion/           PDF validation + parsing, text cleaning, chunking, worker
   embeddings/          Embedder protocol + Sentence Transformers implementation
-  retrieval/           dense, BM25, fusion, filters                           (M4-M5)
+  retrieval/           dense (Qdrant) and BM25 retrievers, tokenizer; fusion in M5
   reranking/           cross-encoder interface + implementation               (M5)
   generation/          LLM provider interface, prompts, citation handling     (M6)
   evaluation/          datasets, metrics, experiment runner                   (M8)
@@ -90,6 +90,9 @@ never touch SQL or clients directly; services never import FastAPI.
 | Embeddings | `BAAI/bge-small-en-v1.5`, normalised vectors, cosine distance, query instruction prefix | Small enough for CPU, strong on retrieval benchmarks for its size. Behind an `Embedder` protocol, so a hosted model is a drop-in. |
 | Vector store layout | One collection, payload `owner_id`/`document_id` with keyword indexes; point id = chunk id | One filter restricts any search to a user's documents; the chunk row in Postgres is the source of truth for text and citations. A collection built for another vector size is refused at startup. |
 | PyTorch | CPU-only wheels from the PyTorch index via `tool.uv.sources` | The default Linux wheel ships CUDA (~2.5 GB) that the image doesn't use. |
+| Sparse retrieval | Own Okapi BM25 (k1=1.5, b=0.75), one in-memory index per user, cached per process and rebuilt when a fingerprint (ready documents, chunk count, last update) changes | Exact BM25 with per-user term statistics: other users' documents never influence scores. Qdrant's sparse vectors would compute IDF across all users. Cost: memory and a rebuild per corpus change, fine for hundreds of PDFs per user; see limitations. |
+| Search results | Retrievers return ids and scores only; text, page and filename are loaded from Postgres scoped to the owner and to `ready` documents | A stale vector (e.g. a failed delete) can't surface: it has no live row. |
+| Model warm-up | API loads the embedding model in the background at startup | The first search otherwise took ~12 s on CPU. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -132,7 +135,10 @@ usage) in M7, optional `document_shares` if sharing is required.
 Known limitations so far: there is no OCR, so scanned PDFs without a text layer fail with a
 clear message. Parsing runs in a thread with a page limit, but a pathological PDF can still
 occupy a worker for a long time because a Python thread cannot be killed; a process pool with
-hard timeouts is the fix if this shows up in practice.
+hard timeouts is the fix if this shows up in practice. BM25 indexes live in each API process's
+memory: very large per-user corpora (hundreds of thousands of chunks) would need a dedicated
+sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer is English-only
+(stopwords, no stemming).
 
 
 1. **Ownership model:** documents are private to the uploader; admins can manage users but do
@@ -155,7 +161,7 @@ hard timeouts is the fix if this shows up in practice.
 1. Project setup and infrastructure (done)
 2. PDF ingestion and parsing (done)
 3. Chunking, embeddings and Qdrant indexing (done)
-4. Dense and BM25 retrieval
+4. Dense and BM25 retrieval (done)
 5. Hybrid search and reranking
 6. Grounded LLM generation and citations
 7. Conversation history and multi-user authorization

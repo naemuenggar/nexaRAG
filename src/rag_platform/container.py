@@ -13,6 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from rag_platform.core.config import Settings
 from rag_platform.db.session import create_engine, create_session_factory
+from rag_platform.embeddings.base import Embedder
+from rag_platform.embeddings.sentence_transformers import create_embedder
 from rag_platform.infrastructure.health import (
     HealthProbe,
     postgres_probe,
@@ -22,6 +24,7 @@ from rag_platform.infrastructure.health import (
 from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
 from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex
+from rag_platform.retrieval.sparse import BM25IndexCache
 
 
 @dataclass(slots=True)
@@ -33,6 +36,8 @@ class Container:
     qdrant: AsyncQdrantClient
     storage: LocalFileStorage
     vector_index: QdrantVectorIndex
+    embedder: Embedder
+    bm25_cache: BM25IndexCache
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
@@ -48,6 +53,11 @@ class Container:
             qdrant=qdrant,
             storage=LocalFileStorage(settings.storage_dir),
             vector_index=create_vector_index(qdrant, settings),
+            # The model loads on first query, not at startup, so the API boots fast.
+            embedder=create_embedder(settings),
+            bm25_cache=BM25IndexCache(
+                settings.bm25_cache_max_owners, k1=settings.bm25_k1, b=settings.bm25_b
+            ),
             health_probes={
                 "postgres": postgres_probe(engine),
                 "redis": redis_probe(redis),

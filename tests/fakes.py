@@ -28,6 +28,9 @@ class HashingEmbedder:
     def dimension(self) -> int:
         return self._dimension
 
+    async def warm_up(self) -> None:
+        return None
+
     async def embed_passages(self, texts: Sequence[str]) -> list[Vector]:
         self.passage_calls += 1
         return [self._embed(t) for t in texts]
