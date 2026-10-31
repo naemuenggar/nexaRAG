@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rag_platform.db.models import Chunk, Document, DocumentStatus
@@ -37,7 +37,7 @@ class ChunkRepository:
         self._session = session
 
     @staticmethod
-    def _ready(owner_id: uuid.UUID):  # type: ignore[no-untyped-def]
+    def _ready(owner_id: uuid.UUID) -> tuple[ColumnElement[bool], ColumnElement[bool]]:
         return (Document.owner_id == owner_id, Document.status == DocumentStatus.READY)
 
     async def fingerprint(self, owner_id: uuid.UUID) -> CorpusFingerprint:
@@ -86,6 +86,31 @@ class ChunkRepository:
             )
             for chunk, filename in rows.all()
         }
+
+    async def filter_ready_document_ids(
+        self,
+        owner_id: uuid.UUID,
+        *,
+        restrict_to: Sequence[uuid.UUID] | None = None,
+        filename_contains: str | None = None,
+        uploaded_after: datetime | None = None,
+        uploaded_before: datetime | None = None,
+    ) -> set[uuid.UUID]:
+        conditions = list(self._ready(owner_id))
+        if restrict_to is not None:
+            conditions.append(Document.id.in_(restrict_to))
+        if filename_contains:
+            # Escape LIKE wildcards so the user's text is matched literally.
+            escaped = (
+                filename_contains.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            )
+            conditions.append(Document.filename.ilike(f"%{escaped}%", escape="\\"))
+        if uploaded_after is not None:
+            conditions.append(Document.created_at >= uploaded_after)
+        if uploaded_before is not None:
+            conditions.append(Document.created_at < uploaded_before)
+        rows = await self._session.execute(select(Document.id).where(*conditions))
+        return set(rows.scalars().all())
 
     async def owned_ready_document_ids(
         self, owner_id: uuid.UUID, document_ids: Sequence[uuid.UUID]

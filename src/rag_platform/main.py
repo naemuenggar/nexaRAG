@@ -16,6 +16,8 @@ from rag_platform.container import Container
 from rag_platform.core.config import Settings, get_settings
 from rag_platform.core.errors import register_error_handlers
 from rag_platform.core.logging import configure_logging, get_logger
+from rag_platform.embeddings.base import Embedder
+from rag_platform.reranking.base import Reranker
 
 # Room for multipart boundaries and part headers on top of the file itself.
 MULTIPART_OVERHEAD_BYTES = 64 * 1024
@@ -31,15 +33,12 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.container = container or Container.from_settings(settings)
         await app.state.container.storage.ensure_ready()
-        warm_up: asyncio.Task[None] | None = None
-        if settings.embedding_warm_up:
-            warm_up = asyncio.create_task(_warm_up(app.state.container, logger))
+        warm_up = asyncio.create_task(_warm_up(app.state.container, settings, logger))
         logger.info("startup", environment=settings.environment.value, version=__version__)
         try:
             yield
         finally:
-            if warm_up is not None:
-                warm_up.cancel()
+            warm_up.cancel()
             await app.state.container.aclose()
             logger.info("shutdown")
 
@@ -76,13 +75,22 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     return app
 
 
-async def _warm_up(container: Container, logger: structlog.stdlib.BoundLogger) -> None:
-    try:
-        await container.embedder.warm_up()
-        logger.info("embedder_ready", model=container.embedder.model_name)
-    except Exception:
-        # Searches will retry the load and report the error; startup must not fail on it.
-        logger.exception("embedder_warm_up_failed")
+async def _warm_up(
+    container: Container, settings: Settings, logger: structlog.stdlib.BoundLogger
+) -> None:
+    """Load models in the background so the first search isn't slow; never fails startup."""
+    models: list[Embedder | Reranker] = []
+    if settings.embedding_warm_up:
+        models.append(container.embedder)
+    if settings.reranker_warm_up:
+        models.append(container.reranker)
+    for model in models:
+        try:
+            await model.warm_up()
+            logger.info("model_ready", model=model.model_name)
+        except Exception:
+            # Requests will retry the load and report the error themselves.
+            logger.exception("model_warm_up_failed", model=model.model_name)
 
 
 def app_factory() -> FastAPI:

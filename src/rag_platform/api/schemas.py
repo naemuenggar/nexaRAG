@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field
 
 from rag_platform.db.models import DocumentStatus, JobStatus
 from rag_platform.retrieval.types import RetrievalMode
@@ -78,11 +78,22 @@ class PageOut(BaseModel):
     char_count: int
 
 
-class SearchRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=2000)
-    mode: RetrievalMode = RetrievalMode.DENSE
-    top_k: int | None = Field(default=None, ge=1)
+class SearchFilters(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     document_ids: list[uuid.UUID] | None = Field(default=None, min_length=1, max_length=500)
+    filename_contains: str | None = Field(default=None, min_length=1, max_length=255)
+    uploaded_after: AwareDatetime | None = None
+    uploaded_before: AwareDatetime | None = None
+
+
+class SearchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    query: str = Field(min_length=1, max_length=2000)
+    mode: RetrievalMode = RetrievalMode.HYBRID_RERANK
+    top_k: int | None = Field(default=None, ge=1)
+    filters: SearchFilters | None = None
 
 
 class SearchHitOut(BaseModel):
@@ -94,6 +105,7 @@ class SearchHitOut(BaseModel):
     page_start: int
     page_end: int
     text: str
+    scores: dict[str, float]
 
 
 class SearchResponseOut(BaseModel):

@@ -45,3 +45,20 @@ class HashingEmbedder:
             vector[bucket % self._dimension] += 1.0
         norm = math.sqrt(sum(x * x for x in vector)) or 1.0
         return [x / norm for x in vector]
+
+
+class OverlapReranker:
+    """Scores a passage by the fraction of query words it contains. Deterministic and fast."""
+
+    model_name = "overlap"
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, int]] = []
+
+    async def warm_up(self) -> None:
+        return None
+
+    async def score(self, query: str, passages: Sequence[str]) -> list[float]:
+        self.calls.append((query, len(passages)))
+        terms = set(_TOKEN.findall(query.lower()))
+        return [len(terms & set(_TOKEN.findall(p.lower()))) / (len(terms) or 1) for p in passages]

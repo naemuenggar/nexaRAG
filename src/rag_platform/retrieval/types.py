@@ -6,6 +6,8 @@ from enum import StrEnum
 class RetrievalMode(StrEnum):
     DENSE = "dense"
     SPARSE = "sparse"
+    HYBRID = "hybrid"
+    HYBRID_RERANK = "hybrid_rerank"
 
 
 @dataclass(frozen=True, slots=True)

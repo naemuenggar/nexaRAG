@@ -24,6 +24,8 @@ from rag_platform.infrastructure.health import (
 from rag_platform.infrastructure.qdrant import create_qdrant_client, create_vector_index
 from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex
+from rag_platform.reranking.base import Reranker
+from rag_platform.reranking.cross_encoder import create_reranker
 from rag_platform.retrieval.sparse import BM25IndexCache
 
 
@@ -38,6 +40,7 @@ class Container:
     vector_index: QdrantVectorIndex
     embedder: Embedder
     bm25_cache: BM25IndexCache
+    reranker: Reranker
     health_probes: Mapping[str, HealthProbe] = field(default_factory=dict)
 
     @classmethod
@@ -55,6 +58,7 @@ class Container:
             vector_index=create_vector_index(qdrant, settings),
             # The model loads on first query, not at startup, so the API boots fast.
             embedder=create_embedder(settings),
+            reranker=create_reranker(settings),
             bm25_cache=BM25IndexCache(
                 settings.bm25_cache_max_owners, k1=settings.bm25_k1, b=settings.bm25_b
             ),

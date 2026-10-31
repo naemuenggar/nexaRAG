@@ -20,6 +20,7 @@ TEST_SETTINGS: dict[str, Any] = {
     "jwt_secret": "x" * 40,
     "health_check_timeout_seconds": 0.2,
     "embedding_warm_up": False,
+    "reranker_warm_up": False,
 }
 
 

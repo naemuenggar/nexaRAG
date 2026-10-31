@@ -85,7 +85,9 @@ def get_search_service(session: DbSessionDep, container: ContainerDep) -> Search
     dense = DenseRetriever(
         container.qdrant, container.settings.qdrant_collection, container.embedder
     )
-    return SearchService(session, dense, container.bm25_cache)
+    return SearchService(
+        session, dense, container.bm25_cache, container.reranker, container.settings
+    )
 
 
 SearchServiceDep = Annotated[SearchService, Depends(get_search_service)]

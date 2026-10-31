@@ -10,6 +10,8 @@ from pathlib import Path
 from pydantic import Field, PostgresDsn, RedisDsn, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from rag_platform.retrieval.fusion import FusionMethod
+
 
 class Environment(StrEnum):
     LOCAL = "local"
@@ -64,6 +66,20 @@ class Settings(BaseSettings):
     bm25_cache_max_owners: int = Field(default=64, ge=1, le=10_000)
     search_default_top_k: int = Field(default=5, ge=1, le=100)
     search_max_top_k: int = Field(default=50, ge=1, le=200)
+
+    # Hybrid: each retriever contributes this many candidates before fusion.
+    hybrid_candidates: int = Field(default=30, ge=1, le=500)
+    fusion_method: FusionMethod = FusionMethod.RRF
+    rrf_k: int = Field(default=60, ge=1, le=1000)
+    # Weighted fusion only: share of the dense score (the rest goes to BM25).
+    fusion_dense_weight: float = Field(default=0.5, ge=0, le=1)
+
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_device: str = "cpu"
+    reranker_batch_size: int = Field(default=16, ge=1, le=512)
+    # Fused candidates passed to the cross-encoder; its cost grows linearly with this.
+    rerank_candidates: int = Field(default=20, ge=1, le=200)
+    reranker_warm_up: bool = True
 
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: str = "HS256"

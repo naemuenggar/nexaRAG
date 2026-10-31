@@ -26,7 +26,7 @@ from rag_platform.infrastructure.storage import LocalFileStorage
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex
 from rag_platform.ingestion.worker import IngestionWorker
 from rag_platform.main import create_app
-from tests.fakes import HashingEmbedder
+from tests.fakes import HashingEmbedder, OverlapReranker
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -98,6 +98,7 @@ def api(app_settings: Settings) -> Iterator[TestClient]:
     container = Container.from_settings(app_settings)
     # Same embedder as the test worker, so dense search matches what was indexed.
     container.embedder = HashingEmbedder()
+    container.reranker = OverlapReranker()
     with TestClient(create_app(container=container), raise_server_exceptions=False) as client:
         yield client
 

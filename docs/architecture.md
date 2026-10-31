@@ -62,8 +62,8 @@ src/rag_platform/
   services/            use-case orchestration (auth, documents; later ask, chats)
   ingestion/           PDF validation + parsing, text cleaning, chunking, worker
   embeddings/          Embedder protocol + Sentence Transformers implementation
-  retrieval/           dense (Qdrant) and BM25 retrievers, tokenizer; fusion in M5
-  reranking/           cross-encoder interface + implementation               (M5)
+  retrieval/           dense (Qdrant) and BM25 retrievers, tokenizer, RRF / weighted fusion
+  reranking/           Reranker protocol + cross-encoder implementation
   generation/          LLM provider interface, prompts, citation handling     (M6)
   evaluation/          datasets, metrics, experiment runner                   (M8)
 migrations/            Alembic, async env reading DATABASE_URL
@@ -93,6 +93,9 @@ never touch SQL or clients directly; services never import FastAPI.
 | Sparse retrieval | Own Okapi BM25 (k1=1.5, b=0.75), one in-memory index per user, cached per process and rebuilt when a fingerprint (ready documents, chunk count, last update) changes | Exact BM25 with per-user term statistics: other users' documents never influence scores. Qdrant's sparse vectors would compute IDF across all users. Cost: memory and a rebuild per corpus change, fine for hundreds of PDFs per user; see limitations. |
 | Search results | Retrievers return ids and scores only; text, page and filename are loaded from Postgres scoped to the owner and to `ready` documents | A stale vector (e.g. a failed delete) can't surface: it has no live row. |
 | Model warm-up | API loads the embedding model in the background at startup | The first search otherwise took ~12 s on CPU. |
+| Hybrid fusion | RRF (k=60) by default, weighted min-max fusion as an option; each retriever contributes 30 candidates | RRF needs no score calibration between BM25 and cosine. M8 measures whether weighted fusion is better on our data. |
+| Reranking | `cross-encoder/ms-marco-MiniLM-L-6-v2` over the top 20 fused candidates; default search mode | Cross-encoders read query and passage together and fix ordering mistakes of both retrievers. 20 candidates keeps CPU latency bounded; configurable. |
+| Metadata filters | Filename substring and upload-date range, resolved in Postgres to a set of document ids before retrieval | One mechanism for all filters: both retrievers already accept a document set, and the owner condition is never optional. |
 | Duplicate uploads | `UNIQUE(owner_id, content_sha256)` on `documents` | Duplicate detection is enforced by the database, per user, so users don't learn about each other's files. |
 | Dependency management | `uv` with committed `uv.lock` | Reproducible installs locally, in CI and in Docker (`--frozen`). |
 | Containers | Multi-stage image, non-root user, datastore ports bound to `127.0.0.1` | Small attack surface by default. |
@@ -162,7 +165,7 @@ sparse index (e.g. OpenSearch or Qdrant sparse vectors) instead. The tokenizer i
 2. PDF ingestion and parsing (done)
 3. Chunking, embeddings and Qdrant indexing (done)
 4. Dense and BM25 retrieval (done)
-5. Hybrid search and reranking
+5. Hybrid search and reranking (done)
 6. Grounded LLM generation and citations
 7. Conversation history and multi-user authorization
 8. Evaluation and benchmarking

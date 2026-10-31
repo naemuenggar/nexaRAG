@@ -27,6 +27,8 @@ CORPUS = {
 }
 
 # Retrieval regression set: query -> (filename, page) that must rank first.
+ALL_MODES = ("sparse", "dense", "hybrid", "hybrid_rerank")
+
 EXPECTED_TOP_HIT = {
     "photovoltaic cells electricity": ("energy.pdf", 1),
     "rotor blades turbines": ("energy.pdf", 2),
@@ -57,7 +59,7 @@ def search(api: TestClient, headers: object, **body: object) -> dict:  # type: i
     return response.json()  # type: ignore[no-any-return]
 
 
-@pytest.mark.parametrize("mode", ["sparse", "dense"])
+@pytest.mark.parametrize("mode", ["sparse", "dense", "hybrid", "hybrid_rerank"])
 async def test_retrieval_regression(
     api: TestClient, corpus_user: dict[str, object], mode: str
 ) -> None:
@@ -90,14 +92,14 @@ async def test_document_filter_restricts_results(
     api: TestClient, corpus_user: dict[str, object]
 ) -> None:
     health_id = corpus_user["ids"]["health.pdf"]  # type: ignore[index]
-    for mode in ("sparse", "dense"):
+    for mode in ALL_MODES:
         results = search(
             api,
             corpus_user["headers"],
             query="sunlight",
             mode=mode,
             top_k=10,
-            document_ids=[health_id],
+            filters={"document_ids": [health_id]},
         )["results"]
         assert results
         assert {r["document_id"] for r in results} == {health_id}
@@ -111,7 +113,7 @@ async def test_users_never_retrieve_each_others_chunks(
     await drain(worker)
     alice_ids = set(corpus_user["ids"].values())  # type: ignore[attr-defined]
 
-    for mode in ("sparse", "dense"):
+    for mode in ALL_MODES:
         results = search(api, bob, query="quarterly revenue solar exercise", mode=mode, top_k=50)[
             "results"
         ]
@@ -125,7 +127,10 @@ async def test_users_never_retrieve_each_others_chunks(
     response = api.post(
         "/search",
         headers=bob,
-        json={"query": "revenue", "document_ids": [corpus_user["ids"]["finance.pdf"]]},  # type: ignore[index]
+        json={
+            "query": "revenue",
+            "filters": {"document_ids": [corpus_user["ids"]["finance.pdf"]]},
+        },  # type: ignore[index]
     )
     assert response.status_code == 404
 
@@ -141,7 +146,7 @@ async def test_documents_not_ready_or_deleted_are_not_searchable(
     pending_filter = api.post(
         "/search",
         headers=headers,
-        json={"query": marker, "document_ids": [pending_id]},  # type: ignore[arg-type]
+        json={"query": marker, "filters": {"document_ids": [pending_id]}},  # type: ignore[arg-type]
     )
     assert pending_filter.status_code == 404
 
@@ -149,7 +154,7 @@ async def test_documents_not_ready_or_deleted_are_not_searchable(
     assert search(api, headers, query=marker, mode="sparse")["results"]
 
     api.delete(f"/documents/{pending_id}", headers=headers)  # type: ignore[arg-type]
-    for mode in ("sparse", "dense"):
+    for mode in ALL_MODES:
         results = search(api, headers, query=marker, mode=mode, top_k=50)["results"]
         assert pending_id not in {r["document_id"] for r in results}
 
@@ -183,3 +188,94 @@ def test_search_validation(api: TestClient) -> None:
     assert too_many.json()["error"]["code"] == "invalid_top_k"
     stopwords_only = search(api, headers, query="the of and", mode="sparse")
     assert stopwords_only["results"] == []
+
+
+async def test_hybrid_results_report_each_stage_score(
+    api: TestClient, corpus_user: dict[str, object]
+) -> None:
+    headers = corpus_user["headers"]
+    hybrid = search(api, headers, query="quarterly revenue", mode="hybrid", top_k=3)["results"]
+    assert {"dense", "bm25", "fused"} <= set(hybrid[0]["scores"])
+    assert hybrid[0]["score"] == hybrid[0]["scores"]["fused"]
+
+    reranked = search(api, headers, query="quarterly revenue", mode="hybrid_rerank", top_k=3)
+    first = reranked["results"][0]
+    assert first["score"] == first["scores"]["rerank"]
+    assert "fused" in first["scores"]
+    scores = [r["score"] for r in reranked["results"]]
+    assert scores == sorted(scores, reverse=True)
+
+
+async def test_default_mode_is_hybrid_rerank(
+    api: TestClient, corpus_user: dict[str, object]
+) -> None:
+    body = search(api, corpus_user["headers"], query="vitamin D")
+    assert body["mode"] == "hybrid_rerank"
+    reranker = api.app.state.container.reranker  # type: ignore[attr-defined]
+    query, candidates = reranker.calls[-1]
+    assert query == "vitamin D"
+    assert candidates <= api.app.state.container.settings.rerank_candidates  # type: ignore[attr-defined]
+
+
+async def test_metadata_filters(api: TestClient, corpus_user: dict[str, object]) -> None:
+    headers = corpus_user["headers"]
+    by_name = search(
+        api,
+        headers,
+        query="sunlight",
+        mode="hybrid",
+        top_k=10,
+        filters={"filename_contains": "HEALTH"},
+    )["results"]
+    assert by_name
+    assert {r["filename"] for r in by_name} == {"health.pdf"}
+
+    # LIKE wildcards in the filter are matched literally, not as patterns.
+    assert (
+        search(api, headers, query="sunlight", mode="hybrid", filters={"filename_contains": "%"})[
+            "results"
+        ]
+        == []
+    )
+
+    future = search(
+        api,
+        headers,
+        query="sunlight",
+        mode="hybrid",
+        filters={"uploaded_after": "2999-01-01T00:00:00Z"},
+    )
+    assert future["results"] == []
+    past = search(
+        api,
+        headers,
+        query="sunlight",
+        mode="hybrid",
+        filters={
+            "uploaded_after": "2000-01-01T00:00:00Z",
+            "uploaded_before": "2999-01-01T00:00:00Z",
+        },
+    )
+    assert past["results"]
+
+    combined = search(
+        api,
+        headers,
+        query="sunlight",
+        mode="sparse",
+        top_k=10,
+        filters={
+            "document_ids": [corpus_user["ids"]["energy.pdf"], corpus_user["ids"]["health.pdf"]],  # type: ignore[index]
+            "filename_contains": "energy",
+        },
+    )["results"]
+    assert {r["filename"] for r in combined} == {"energy.pdf"}
+
+    naive_date = api.post(
+        "/search",
+        headers=headers,  # type: ignore[arg-type]
+        json={"query": "x", "filters": {"uploaded_after": "2024-01-01T00:00:00"}},
+    )
+    assert naive_date.status_code == 422  # timezone required: no ambiguous dates
+    unknown = api.post("/search", headers=headers, json={"query": "x", "colour": "red"})  # type: ignore[arg-type]
+    assert unknown.status_code == 422

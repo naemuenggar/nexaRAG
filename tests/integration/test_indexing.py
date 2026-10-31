@@ -18,6 +18,7 @@ from rag_platform.embeddings.sentence_transformers import (
 from rag_platform.infrastructure.qdrant import create_qdrant_client
 from rag_platform.infrastructure.vector_index import QdrantVectorIndex, VectorIndexError
 from rag_platform.ingestion.worker import IngestionWorker
+from rag_platform.reranking.cross_encoder import create_reranker
 from tests.fakes import HashingEmbedder
 from tests.integration.test_documents_api import drain, signup, upload
 from tests.pdf_factory import make_pdf
@@ -193,3 +194,21 @@ async def test_sentence_transformer_embedder_produces_meaningful_vectors(
 
     assert cosine(query, passages[0]) > cosine(query, passages[1]) + 0.1
     assert await embedder.embed_passages([]) == []
+
+
+async def test_cross_encoder_reranker_prefers_the_answering_passage(
+    live_settings: Settings,
+) -> None:
+    """Runs the real configured cross-encoder (downloaded on first run, ~90 MB)."""
+    reranker = create_reranker(live_settings)
+    scores = await reranker.score(
+        "When was the Eiffel Tower completed?",
+        [
+            "The Eiffel Tower is a wrought-iron lattice tower in Paris.",
+            "Construction of the Eiffel Tower was completed in March 1889.",
+            "Bananas are yellow when they are ripe.",
+        ],
+    )
+    assert len(scores) == 3
+    assert scores[1] > scores[0] > scores[2]
+    assert await reranker.score("anything", []) == []
