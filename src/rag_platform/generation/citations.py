@@ -16,9 +16,7 @@ _MARKER = re.compile(r"\[(\d{1,3})\]")
 # Other citation styles models produce, rewritten to [n] before parsing: lenticular brackets
 # (U+3010/U+3011, used natively by some models, optionally with a "†..." locator), and lists
 # such as [1, 3].
-_VARIANT_MARKER = re.compile(
-    r"[\[【]\s*(\d{1,3}(?:\s*,\s*\d{1,3})*)\s*(?:†[^\]】]*)?[\]】]"
-)
+_VARIANT_MARKER = re.compile(r"[\[【]\s*(\d{1,3}(?:\s*,\s*\d{1,3})*)\s*(?:†[^\]】]*)?[\]】]")
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _MAX_SNIPPET_CHARS = 400
 _CURLY_APOSTROPHE = chr(0x2019)  # models often write "don't" with a typographic apostrophe
