@@ -102,6 +102,9 @@ Ollama (`http://127.0.0.1:11434/v1`). Without an LLM, search works and `/ask` an
 
 All settings are documented in [.env.example](.env.example).
 
+A web front end (Next.js; sign in, upload, chat with citations) lives in [web/](web/README.md)
+and deploys to Vercel; the API itself runs in Docker.
+
 ## API
 
 | Method | Path | Who | Description |
