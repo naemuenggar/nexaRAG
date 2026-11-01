@@ -63,6 +63,9 @@ def create_app(settings: Settings | None = None, container: Container | None = N
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
             allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+            # Lets a public site (e.g. the Vercel front end) call an API on localhost/LAN:
+            # Chrome's Private Network Access preflight is rejected without this.
+            allow_private_network=True,
         )
     # Registered before RequestContextMiddleware so it runs inside it (413s get a request id).
     app.add_middleware(

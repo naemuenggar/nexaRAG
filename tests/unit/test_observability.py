@@ -164,3 +164,20 @@ def test_log_entries_get_trace_ids_inside_a_span(spans: InMemorySpanExporter) ->
     assert len(event["trace_id"]) == 32
     assert len(event["span_id"]) == 16
     assert "trace_id" not in add_trace_context(None, "info", {"event": "outside"})
+
+
+def test_private_network_preflight_is_allowed_for_cors_origins() -> None:
+    app = create_app(make_settings(cors_allow_origins=["https://site.example"]))
+    with TestClient(app) as client:
+        headers = {
+            "Origin": "https://site.example",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+            "Access-Control-Request-Private-Network": "true",
+        }
+        allowed = client.options("/auth/login", headers=headers)
+        assert allowed.status_code == 200
+        assert allowed.headers["access-control-allow-private-network"] == "true"
+        other = client.options("/auth/login", headers={**headers, "Origin": "https://evil.example"})
+        assert other.status_code == 400  # origin not allowed: the browser blocks the request
+        assert "access-control-allow-origin" not in other.headers
