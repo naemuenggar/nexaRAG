@@ -278,8 +278,33 @@ and cost come from the provider's usage report.
 * The corpus is small, so Recall@5 saturates for three modes; MRR and nDCG separate them. A
   larger corpus with near-duplicate documents is needed to compare recall. Treat these numbers
   as a regression baseline, not a general claim about the methods.
-* **Generation metrics (faithfulness, relevancy, correctness, citation correctness, answer
-  latency, token cost) have not been measured yet**: no LLM was configured for this run.
+
+**Generation** (2026-11-01, `openai/gpt-oss-120b` on Groq's free tier, retrieval
+`hybrid_rerank`, all 38 questions; the judge is the same model;
+[evaluation/results/enterprise-v1-20261101T051941Z.md](evaluation/results/enterprise-v1-20261101T051941Z.md)):
+
+| Metric | Value |
+|---|---|
+| Answered (32 answerable questions) | 1.000 |
+| Refused (6 unanswerable questions) | 1.000 |
+| Citation precision / recall (deterministic, vs expected pages) | 1.000 / 1.000 |
+| Faithfulness (judge) | 0.911 |
+| Relevancy (judge) | 1.000 |
+| Correctness vs reference (judge) | 0.891 |
+| End-to-end latency mean / p50 / p95 | 6.0 s / 6.8 s / 9.7 s |
+| Avg prompt / completion tokens | 844 / 102 |
+| Cost | not reported (free tier; set `LLM_PRICE_*` for paid models) |
+
+* Every answerable question was answered with a citation to the right page, and every
+  unanswerable one got the fixed refusal: no hallucinated answers on this set.
+* The judge scores are noisier than the deterministic ones. Most correctness half-points are
+  answers that leave out a secondary detail of the reference ("plus public holidays"), and the
+  lowest faithfulness score (0.0 on `tr-01`) is a judge error: the answer quotes the cited
+  passage. Use a different, stronger judge model for decisions that depend on these numbers.
+* Latency includes waiting out the free tier's rate limits (the client retries 429s), so it
+  overstates what a paid endpoint would show.
+* The first run of this evaluation found a real bug: this model cites as `【2】`, not `[2]`, so
+  valid answers were withheld as uncited. The parser now accepts both (and lists like `[1, 3]`).
 
 `tests/integration/test_retrieval_benchmark.py` repeats the retrieval evaluation in CI and fails
 when a mode drops below a floor set just under these numbers.
@@ -341,8 +366,7 @@ regression benchmark.
   changes. Fine for hundreds of PDFs per user; very large corpora need a dedicated sparse index.
 * **Parsing is not sandboxed**: a pathological PDF can occupy a worker thread for a long time
   (there is a page limit, but no hard timeout).
-* **Evaluation**: a small synthetic dataset (saturates Recall@5). The LLM judge is by default
-  the answering model itself, which can be lenient; generation metrics are unmeasured until an
-  LLM is configured.
+* **Evaluation**: a small synthetic dataset (saturates Recall@5), measured with one model. The
+  LLM judge is by default the answering model itself, which can be lenient or noisy.
 * **Sharing** is per user and read-only; there are no groups, roles or admin read access.
 * **Local file storage** for uploads (one volume); multiple hosts would need object storage.

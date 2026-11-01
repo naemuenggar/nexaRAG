@@ -188,6 +188,6 @@ lenient towards its own answers; use a different, stronger model for judging whe
 5. Hybrid search and reranking (done)
 6. Grounded LLM generation and citations (done)
 7. Conversation history and multi-user authorization (done)
-8. Evaluation and benchmarking (done; generation metrics pending an LLM)
+8. Evaluation and benchmarking (done)
 9. Observability, security and performance (done)
 10. Docker deployment, CI/CD and documentation (done)

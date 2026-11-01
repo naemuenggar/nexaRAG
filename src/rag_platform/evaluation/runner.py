@@ -421,6 +421,11 @@ async def run(
                 "database_url": database_url,
                 "storage_dir": storage_dir,
                 "qdrant_collection": f"eval_{uuid.uuid4().hex[:12]}",
+                # A batch run hits free-tier rate limits; wait them out rather than record
+                # a failed answer. Reasoning models also need room before the visible answer.
+                "llm_max_retries": max(base.llm_max_retries, 12),
+                "llm_retry_max_wait_seconds": max(base.llm_retry_max_wait_seconds, 90),
+                "llm_max_tokens": max(base.llm_max_tokens, 2000),
             }
         )
         container = Container.from_settings(settings)

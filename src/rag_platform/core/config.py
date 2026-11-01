@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = None
     llm_model: str = ""
     llm_timeout_seconds: float = Field(default=60, gt=0, le=600)
+    # Retries on 429/5xx/network errors, honouring Retry-After, each wait capped.
+    llm_max_retries: int = Field(default=2, ge=0, le=20)
+    llm_retry_max_wait_seconds: float = Field(default=30, ge=0, le=300)
     llm_max_tokens: int = Field(default=700, ge=16, le=8192)
     llm_temperature: float = Field(default=0.0, ge=0, le=2)
     # USD per 1,000 tokens, for cost reporting only. Leave unset if unknown.

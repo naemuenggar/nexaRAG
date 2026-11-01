@@ -14,6 +14,7 @@ from rag_platform.generation.llm import (
     LLMError,
     LLMResult,
     OpenAICompatibleProvider,
+    RetryPolicy,
 )
 from rag_platform.generation.prompts import NO_ANSWER, SYSTEM_PROMPT, PromptSource, build_messages
 from rag_platform.repositories.chunks import ChunkRecord
@@ -357,7 +358,11 @@ async def test_anthropic_provider_wire_format() -> None:
 )
 async def test_provider_errors_become_llm_errors(response: httpx.Response) -> None:
     provider = OpenAICompatibleProvider(
-        base_url="https://llm.example/v1", api_key=None, model="m", timeout_seconds=5
+        base_url="https://llm.example/v1",
+        api_key=None,
+        model="m",
+        timeout_seconds=5,
+        retry=RetryPolicy(max_retries=0),
     )
     mocked(provider, lambda request: response)
     with pytest.raises(LLMError) as info:
@@ -369,3 +374,74 @@ async def test_provider_errors_become_llm_errors(response: httpx.Response) -> No
 def test_llm_settings_require_url_and_model() -> None:
     with pytest.raises(ValueError, match="llm_base_url"):
         make_settings(llm_provider="openai")
+
+
+async def test_provider_retries_rate_limits_honouring_retry_after(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    waits: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        waits.append(seconds)
+
+    monkeypatch.setattr("rag_platform.generation.llm.asyncio.sleep", fake_sleep)
+    responses = [
+        httpx.Response(429, headers={"retry-after": "7"}),
+        httpx.Response(503),
+        httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}], "usage": {}}),
+    ]
+    provider = OpenAICompatibleProvider(
+        base_url="https://llm.example/v1",
+        api_key=None,
+        model="m",
+        timeout_seconds=5,
+        retry=RetryPolicy(max_retries=3, max_wait_seconds=5),
+    )
+    mocked(provider, lambda request: responses.pop(0))
+    result = await provider.complete([ChatMessage("user", "q")], max_tokens=5, temperature=0)
+    assert result.text == "ok"
+    assert waits == [5, 2.0]  # Retry-After capped at max_wait; then exponential (attempt 1)
+    await provider.aclose()
+
+
+async def test_provider_gives_up_after_max_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_sleep(seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr("rag_platform.generation.llm.asyncio.sleep", fake_sleep)
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(429)
+
+    provider = OpenAICompatibleProvider(
+        base_url="https://llm.example/v1",
+        api_key=None,
+        model="m",
+        timeout_seconds=5,
+        retry=RetryPolicy(max_retries=2),
+    )
+    mocked(provider, handler)
+    with pytest.raises(LLMError, match="429"):
+        await provider.complete([ChatMessage("user", "q")], max_tokens=5, temperature=0)
+    assert calls == 3
+    await provider.aclose()
+
+
+@pytest.mark.parametrize(
+    ("reply", "expected_text", "cited"),
+    [
+        ("Revenue was 84.6 million euros【2】.", "Revenue was 84.6 million euros[2].", [2]),
+        ("Founded in 2009【1†L3-L5】.", "Founded in 2009[1].", [1]),
+        ("Both rose [1, 3].", "Both rose [1][3].", [1, 3]),
+        ("Both rose 【1,2】.", "Both rose [1][2].", [1, 2]),
+    ],
+)
+def test_alternative_citation_styles_are_normalised(
+    reply: str, expected_text: str, cited: list[int]
+) -> None:
+    parsed = parse_answer(reply, {1, 2, 3})
+    assert parsed.text == expected_text
+    assert parsed.cited == cited

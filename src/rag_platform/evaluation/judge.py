@@ -70,7 +70,8 @@ class JudgeScores:
 
 
 class Judge:
-    def __init__(self, llm: LLMProvider, *, max_tokens: int = 200) -> None:
+    # Generous: reasoning models spend part of the budget before writing the JSON.
+    def __init__(self, llm: LLMProvider, *, max_tokens: int = 1500) -> None:
         self._llm = llm
         self._max_tokens = max_tokens
         self._prompt_tokens = 0

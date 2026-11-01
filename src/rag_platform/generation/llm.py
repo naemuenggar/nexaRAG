@@ -3,6 +3,8 @@
 Only this module knows provider wire formats. Everything else sees ``LLMProvider``.
 """
 
+import asyncio
+import contextlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Protocol
@@ -33,6 +35,21 @@ class LLMError(Exception):
     """The provider failed or returned something unusable. Never shown verbatim to users."""
 
 
+@dataclass(frozen=True, slots=True)
+class RetryPolicy:
+    """Retries for rate limits (429) and transient upstream failures (5xx, network errors).
+
+    The provider's ``Retry-After`` header is honoured when present, otherwise the wait doubles
+    from 1 s. No single wait exceeds ``max_wait_seconds``.
+    """
+
+    max_retries: int = 2
+    max_wait_seconds: float = 30.0
+
+
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+
 class LLMProvider(Protocol):
     @property
     def model(self) -> str: ...
@@ -48,8 +65,15 @@ class OpenAICompatibleProvider:
     """``POST {base_url}/chat/completions``: OpenAI, Azure OpenAI, vLLM, Ollama, LiteLLM, etc."""
 
     def __init__(
-        self, *, base_url: str, api_key: str | None, model: str, timeout_seconds: float
+        self,
+        *,
+        base_url: str,
+        api_key: str | None,
+        model: str,
+        timeout_seconds: float,
+        retry: RetryPolicy | None = None,
     ) -> None:
+        self._retry = retry or RetryPolicy()
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self._client = httpx.AsyncClient(
             base_url=base_url.rstrip("/"), headers=headers, timeout=timeout_seconds
@@ -69,7 +93,7 @@ class OpenAICompatibleProvider:
             "max_tokens": max_tokens,
             "temperature": temperature,
         }
-        body = await _post_json(self._client, "/chat/completions", payload)
+        body = await _post_json(self._client, "/chat/completions", payload, self._retry)
         try:
             text = body["choices"][0]["message"]["content"] or ""
             usage = body.get("usage") or {}
@@ -92,8 +116,15 @@ class AnthropicProvider:
     API_VERSION = "2023-06-01"
 
     def __init__(
-        self, *, base_url: str, api_key: str | None, model: str, timeout_seconds: float
+        self,
+        *,
+        base_url: str,
+        api_key: str | None,
+        model: str,
+        timeout_seconds: float,
+        retry: RetryPolicy | None = None,
     ) -> None:
+        self._retry = retry or RetryPolicy()
         headers = {"anthropic-version": self.API_VERSION}
         if api_key:
             headers["x-api-key"] = api_key
@@ -120,7 +151,7 @@ class AnthropicProvider:
         }
         if system:
             payload["system"] = system
-        body = await _post_json(self._client, "/v1/messages", payload)
+        body = await _post_json(self._client, "/v1/messages", payload, self._retry)
         try:
             text = "".join(
                 block.get("text", "") for block in body["content"] if block.get("type") == "text"
@@ -139,11 +170,24 @@ class AnthropicProvider:
         await self._client.aclose()
 
 
-async def _post_json(client: httpx.AsyncClient, path: str, payload: dict[str, Any]) -> Any:
-    try:
-        response = await client.post(path, json=payload)
-    except httpx.HTTPError as exc:
-        raise LLMError(f"request failed: {type(exc).__name__}") from exc
+async def _post_json(
+    client: httpx.AsyncClient, path: str, payload: dict[str, Any], retry: RetryPolicy
+) -> Any:
+    attempt = 0
+    while True:
+        try:
+            response = await client.post(path, json=payload)
+        except httpx.HTTPError as exc:
+            if attempt < retry.max_retries:
+                await asyncio.sleep(_backoff(attempt, None, retry))
+                attempt += 1
+                continue
+            raise LLMError(f"request failed: {type(exc).__name__}") from exc
+        if response.status_code in _RETRYABLE_STATUS and attempt < retry.max_retries:
+            await asyncio.sleep(_backoff(attempt, response.headers.get("retry-after"), retry))
+            attempt += 1
+            continue
+        break
     if response.status_code >= 400:
         # The status is enough for logs; provider error bodies can echo the prompt.
         raise LLMError(f"provider returned HTTP {response.status_code}")
@@ -151,6 +195,15 @@ async def _post_json(client: httpx.AsyncClient, path: str, payload: dict[str, An
         return response.json()
     except ValueError as exc:
         raise LLMError("provider returned invalid JSON") from exc
+
+
+def _backoff(attempt: int, retry_after: str | None, retry: RetryPolicy) -> float:
+    wait = 2.0**attempt
+    if retry_after:
+        # An HTTP-date value is not parsed; exponential backoff is used instead.
+        with contextlib.suppress(ValueError):
+            wait = float(retry_after)
+    return max(0.0, min(wait, retry.max_wait_seconds))
 
 
 def create_llm(settings: "Settings") -> LLMProvider | None:
@@ -170,4 +223,5 @@ def create_llm(settings: "Settings") -> LLMProvider | None:
         api_key=api_key,
         model=settings.llm_model,
         timeout_seconds=settings.llm_timeout_seconds,
+        retry=RetryPolicy(settings.llm_max_retries, settings.llm_retry_max_wait_seconds),
     )

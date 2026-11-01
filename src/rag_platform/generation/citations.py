@@ -13,6 +13,12 @@ from rag_platform.generation.prompts import NO_ANSWER
 from rag_platform.retrieval.tokenize import tokenize
 
 _MARKER = re.compile(r"\[(\d{1,3})\]")
+# Other citation styles models produce, rewritten to [n] before parsing: lenticular brackets
+# (U+3010/U+3011, used natively by some models, optionally with a "†..." locator), and lists
+# such as [1, 3].
+_VARIANT_MARKER = re.compile(
+    r"[\[【]\s*(\d{1,3}(?:\s*,\s*\d{1,3})*)\s*(?:†[^\]】]*)?[\]】]"
+)
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")
 _MAX_SNIPPET_CHARS = 400
 _CURLY_APOSTROPHE = chr(0x2019)  # models often write "don't" with a typographic apostrophe
@@ -26,8 +32,14 @@ class ParsedAnswer:
     is_refusal: bool
 
 
+def normalise_markers(text: str) -> str:
+    return _VARIANT_MARKER.sub(
+        lambda m: "".join(f"[{n.strip()}]" for n in m.group(1).split(",")), text
+    )
+
+
 def parse_answer(text: str, valid_numbers: set[int]) -> ParsedAnswer:
-    cleaned = text.strip()
+    cleaned = normalise_markers(text.strip())
     if _is_refusal(cleaned):
         return ParsedAnswer(NO_ANSWER, [], [], True)
     cited: list[int] = []

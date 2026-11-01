@@ -1,0 +1,1439 @@
+{
+  "dataset": "enterprise-v1",
+  "started_at": "2026-11-01T05:19:41+00:00",
+  "environment": {
+    "platform_version": "0.1.0",
+    "python": "3.12.1",
+    "machine": "Windows AMD64",
+    "processor": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_device": "cpu",
+    "reranker_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "chunk_size_words": 300,
+    "chunk_overlap_words": 50,
+    "chunk_cross_pages": false,
+    "fusion_method": "rrf",
+    "rrf_k": 60,
+    "hybrid_candidates": 30,
+    "rerank_candidates": 20,
+    "llm_model": "openai/gpt-oss-120b"
+  },
+  "ingestion": {
+    "documents": 6,
+    "pages": 20,
+    "seconds": 1.0
+  },
+  "top_k": 5,
+  "retrieval": {
+    "hybrid_rerank": {
+      "questions": 32,
+      "recall_at_k": 1.0,
+      "mrr": 0.9427,
+      "ndcg_at_k": 0.9572,
+      "latency_ms": {
+        "mean": 236.38,
+        "p50": 225.8,
+        "p95": 316.33
+      },
+      "recall_at_k_lexical": 1.0,
+      "recall_at_k_paraphrase": 1.0
+    }
+  },
+  "generation": {
+    "questions": 38,
+    "answer_rate_answerable": 1.0,
+    "refusal_rate_unanswerable": 1.0,
+    "faithfulness": 0.9115,
+    "relevancy": 1.0,
+    "correctness": 0.8906,
+    "citation_precision": 1.0,
+    "citation_recall": 1.0,
+    "latency_ms": {
+      "mean": 6045.61,
+      "p50": 6780.59,
+      "p95": 9724.53
+    },
+    "avg_prompt_tokens": 843.7895,
+    "avg_completion_tokens": 102.1316,
+    "total_cost_usd": null,
+    "judge_failures": 0
+  },
+  "retrieval_rows": [
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.5,
+      "ndcg_at_k": 0.6309297535714575,
+      "latency_ms": 214.05,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 203.8,
+      "top": [
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "incident-report-INC-2291.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 343.79,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "incident-report-INC-2291.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 273.7,
+      "top": [
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 216.13,
+      "top": [
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 248.91,
+      "top": [
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 260.9,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 222.93,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 216.09,
+      "top": [
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 232.25,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 212.55,
+      "top": [
+        "helios-hx420-datasheet.pdf#p3",
+        "helios-hx420-datasheet.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 230.58,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "incident-report-INC-2291.pdf#p3",
+        "northwind-annual-report-2024.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 293.16,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "incident-report-INC-2291.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 205.66,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 250.4,
+      "top": [
+        "employee-handbook.pdf#p3",
+        "employee-handbook.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 216.66,
+      "top": [
+        "employee-handbook.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "employee-handbook.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 198.98,
+      "top": [
+        "employee-handbook.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3",
+        "employee-handbook.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 316.33,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 0.3333333333333333,
+      "ndcg_at_k": 0.5,
+      "latency_ms": 246.56,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "northwind-annual-report-2024.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 200.77,
+      "top": [
+        "incident-report-INC-2291.pdf#p2",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "employee-handbook.pdf#p4"
+      ]
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 256.69,
+      "top": [
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "helios-hx420-datasheet.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 235.35,
+      "top": [
+        "incident-report-INC-2291.pdf#p1",
+        "incident-report-INC-2291.pdf#p3",
+        "incident-report-INC-2291.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 203.67,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 302.34,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 201.84,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 206.4,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "northwind-annual-report-2024.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 273.92,
+      "top": [
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "clinical-trial-summary-CT-88.pdf#p1",
+        "helios-hx420-datasheet.pdf#p2",
+        "helios-hx420-datasheet.pdf#p1"
+      ]
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 207.8,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "northwind-annual-report-2024.pdf#p4",
+        "northwind-annual-report-2024.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 228.67,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "clinical-trial-summary-CT-88.pdf#p3",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 242.95,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "incident-report-INC-2291.pdf#p1",
+        "employee-handbook.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 204.69,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "northwind-annual-report-2024.pdf#p4",
+        "helios-hx420-datasheet.pdf#p2"
+      ]
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "mode": "hybrid_rerank",
+      "recall_at_k": 1.0,
+      "reciprocal_rank": 1.0,
+      "ndcg_at_k": 1.0,
+      "latency_ms": 195.79,
+      "top": [
+        "lakeside-tram-line-4-plan.pdf#p3",
+        "lakeside-tram-line-4-plan.pdf#p1",
+        "lakeside-tram-line-4-plan.pdf#p2",
+        "clinical-trial-summary-CT-88.pdf#p2",
+        "northwind-annual-report-2024.pdf#p3"
+      ]
+    }
+  ],
+  "generation_rows": [
+    {
+      "question_id": "nw-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Northwind Turbines' total revenue for 2024 was 84.6 million euros[2].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 0.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 1384.77,
+      "prompt_tokens": 882,
+      "completion_tokens": 74,
+      "cost_usd": null,
+      "judge_prompt_tokens": 741,
+      "judge_completion_tokens": 438,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "nw-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Mette Kjaer has served as chief executive officer of Northwind Turbines since it was founded in 2009[1].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 1152.35,
+      "prompt_tokens": 886,
+      "completion_tokens": 115,
+      "cost_usd": null,
+      "judge_prompt_tokens": 764,
+      "judge_completion_tokens": 350,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "nw-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Northwind employed 512 people at the end of 2024[1].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 2180.77,
+      "prompt_tokens": 869,
+      "completion_tokens": 90,
+      "cost_usd": null,
+      "judge_prompt_tokens": 709,
+      "judge_completion_tokens": 263,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "nw-04",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Northwind’s second assembly plant is located in Gdańsk, and it can produce up to 1,200 turbines per year[1].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 1258.84,
+      "prompt_tokens": 889,
+      "completion_tokens": 113,
+      "cost_usd": null,
+      "judge_prompt_tokens": 765,
+      "judge_completion_tokens": 383,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "nw-05",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Northwind signed a second blade‑supply contract in November 2024 to lessen its reliance on a single rotor‑blade supplier[1].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p4"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 3209.25,
+      "prompt_tokens": 868,
+      "completion_tokens": 97,
+      "cost_usd": null,
+      "judge_prompt_tokens": 754,
+      "judge_completion_tokens": 377,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "nw-06",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The growth was driven mainly by the new NT‑30 turbine, which accounted for 41 percent of unit sales[1].",
+      "citations": [
+        "northwind-annual-report-2024.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 1234.4,
+      "prompt_tokens": 892,
+      "completion_tokens": 111,
+      "cost_usd": null,
+      "judge_prompt_tokens": 764,
+      "judge_completion_tokens": 348,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "hx-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The HX‑420 module has an efficiency of 22.4 percent [1].",
+      "citations": [
+        "helios-hx420-datasheet.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 1102.51,
+      "prompt_tokens": 858,
+      "completion_tokens": 75,
+      "cost_usd": null,
+      "judge_prompt_tokens": 968,
+      "judge_completion_tokens": 378,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "hx-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The Helios HX‑420 panel weighs 21.5 kilograms[1].",
+      "citations": [
+        "helios-hx420-datasheet.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 8173.85,
+      "prompt_tokens": 862,
+      "completion_tokens": 74,
+      "cost_usd": null,
+      "judge_prompt_tokens": 704,
+      "judge_completion_tokens": 240,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "hx-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The HX‑420’s power output drops only about 0.29 percent for each degree Celsius rise in temperature, so it loses less output on hot days than many older modules [3].",
+      "citations": [
+        "helios-hx420-datasheet.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6814.91,
+      "prompt_tokens": 846,
+      "completion_tokens": 128,
+      "cost_usd": null,
+      "judge_prompt_tokens": 789,
+      "judge_completion_tokens": 470,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "hx-04",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The HX‑420 comes with a 15‑year product warranty[1].",
+      "citations": [
+        "helios-hx420-datasheet.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 6709.48,
+      "prompt_tokens": 815,
+      "completion_tokens": 72,
+      "cost_usd": null,
+      "judge_prompt_tokens": 701,
+      "judge_completion_tokens": 423,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "hx-05",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Yes. The HX‑420 is certified for coastal installations and has passed salt‑mist corrosion tests, indicating it can be installed near the sea[1].",
+      "citations": [
+        "helios-hx420-datasheet.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 0.6666666666666666,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7789.76,
+      "prompt_tokens": 844,
+      "completion_tokens": 141,
+      "cost_usd": null,
+      "judge_prompt_tokens": 748,
+      "judge_completion_tokens": 644,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Full‑time employees receive 26 days of paid annual leave each calendar year[1].",
+      "citations": [
+        "employee-handbook.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 9725.26,
+      "prompt_tokens": 820,
+      "completion_tokens": 49,
+      "cost_usd": null,
+      "judge_prompt_tokens": 701,
+      "judge_completion_tokens": 302,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "You can carry over up to 5 unused vacation days to the next year[1].",
+      "citations": [
+        "employee-handbook.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 9724.53,
+      "prompt_tokens": 838,
+      "completion_tokens": 119,
+      "cost_usd": null,
+      "judge_prompt_tokens": 708,
+      "judge_completion_tokens": 302,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Employees may work remotely up to three days per week, subject to manager approval[1].",
+      "citations": [
+        "employee-handbook.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 8882.04,
+      "prompt_tokens": 827,
+      "completion_tokens": 87,
+      "cost_usd": null,
+      "judge_prompt_tokens": 714,
+      "judge_completion_tokens": 296,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-04",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Meals during business travel are reimbursed up to 45 euros per day[1].",
+      "citations": [
+        "employee-handbook.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7727.38,
+      "prompt_tokens": 839,
+      "completion_tokens": 92,
+      "cost_usd": null,
+      "judge_prompt_tokens": 713,
+      "judge_completion_tokens": 257,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-05",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "If you lose your work laptop, you must report the incident to security@brightline.example within one hour of discovering the loss[1].",
+      "citations": [
+        "employee-handbook.pdf#p4"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 4219.64,
+      "prompt_tokens": 835,
+      "completion_tokens": 102,
+      "cost_usd": null,
+      "judge_prompt_tokens": 732,
+      "judge_completion_tokens": 517,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "eh-06",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Parental leave is 20 weeks at full pay for every parent, regardless of gender[1].",
+      "citations": [
+        "employee-handbook.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 5392.14,
+      "prompt_tokens": 820,
+      "completion_tokens": 81,
+      "cost_usd": null,
+      "judge_prompt_tokens": 699,
+      "judge_completion_tokens": 292,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "in-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The outage lasted 47 minutes[1].",
+      "citations": [
+        "incident-report-INC-2291.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6713.35,
+      "prompt_tokens": 823,
+      "completion_tokens": 98,
+      "cost_usd": null,
+      "judge_prompt_tokens": 687,
+      "judge_completion_tokens": 275,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "in-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The payments API stopped working because the internal load balancer’s TLS certificate had expired; the certificate had been issued manually two years earlier and was not included in the automated renewal process, leading to the service outage[3].",
+      "citations": [
+        "incident-report-INC-2291.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6174.54,
+      "prompt_tokens": 862,
+      "completion_tokens": 151,
+      "cost_usd": null,
+      "judge_prompt_tokens": 791,
+      "judge_completion_tokens": 625,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "in-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The alert was sent to a team channel that isn’t monitored outside of business hours, so it wasn’t seen and no one responded right away[1].",
+      "citations": [
+        "incident-report-INC-2291.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6583.98,
+      "prompt_tokens": 836,
+      "completion_tokens": 155,
+      "cost_usd": null,
+      "judge_prompt_tokens": 749,
+      "judge_completion_tokens": 491,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "in-04",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The platform team now issues and renews every certificate automatically, and any certificate that will expire within 21 days triggers a high‑priority alert. In addition, payment‑service alerts have been changed to page the on‑call engineer directly. [1]",
+      "citations": [
+        "incident-report-INC-2291.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7852.2,
+      "prompt_tokens": 853,
+      "completion_tokens": 188,
+      "cost_usd": null,
+      "judge_prompt_tokens": 838,
+      "judge_completion_tokens": 467,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "in-05",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Approximately 18,000 payment attempts failed during the INC‑2291 outage[1].",
+      "citations": [
+        "incident-report-INC-2291.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 5423.91,
+      "prompt_tokens": 831,
+      "completion_tokens": 82,
+      "cost_usd": null,
+      "judge_prompt_tokens": 697,
+      "judge_completion_tokens": 289,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "ct-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The CT‑88 trial enrolled 240 adult participants[1].",
+      "citations": [
+        "clinical-trial-summary-CT-88.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 6147.12,
+      "prompt_tokens": 848,
+      "completion_tokens": 63,
+      "cost_usd": null,
+      "judge_prompt_tokens": 674,
+      "judge_completion_tokens": 401,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "ct-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Yes. Participants taking the 40 mg dose experienced 4.1 fewer migraine days per month, compared with a 1.6‑day reduction in the placebo group, and this difference met the primary endpoint[1].",
+      "citations": [
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 9702.09,
+      "prompt_tokens": 851,
+      "completion_tokens": 141,
+      "cost_usd": null,
+      "judge_prompt_tokens": 809,
+      "judge_completion_tokens": 532,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "ct-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The most common adverse events reported with veltrazine were nausea and dizziness[1].",
+      "citations": [
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7841.53,
+      "prompt_tokens": 851,
+      "completion_tokens": 98,
+      "cost_usd": null,
+      "judge_prompt_tokens": 701,
+      "judge_completion_tokens": 460,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "ct-04",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "12 percent of participants taking veltrazine reported adverse events[1].",
+      "citations": [
+        "clinical-trial-summary-CT-88.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6821.12,
+      "prompt_tokens": 849,
+      "completion_tokens": 84,
+      "cost_usd": null,
+      "judge_prompt_tokens": 700,
+      "judge_completion_tokens": 338,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "ct-05",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The 20 mg dose did not show a statistically significant benefit, indicating it was not effective[1].",
+      "citations": [
+        "clinical-trial-summary-CT-88.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 0.5,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 6798.94,
+      "prompt_tokens": 823,
+      "completion_tokens": 91,
+      "cost_usd": null,
+      "judge_prompt_tokens": 718,
+      "judge_completion_tokens": 423,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "tr-01",
+      "style": "lexical",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The approved budget for tram line 4 is 380 million euros[1].",
+      "citations": [
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 0.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 6762.24,
+      "prompt_tokens": 831,
+      "completion_tokens": 78,
+      "cost_usd": null,
+      "judge_prompt_tokens": 702,
+      "judge_completion_tokens": 505,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "tr-02",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "Passengers can start riding the new tram in December 2029[1].",
+      "citations": [
+        "lakeside-tram-line-4-plan.pdf#p2"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7623.0,
+      "prompt_tokens": 817,
+      "completion_tokens": 82,
+      "cost_usd": null,
+      "judge_prompt_tokens": 680,
+      "judge_completion_tokens": 258,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "tr-03",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The line will have 14 stations and will be 11.8 kilometres long[1].",
+      "citations": [
+        "lakeside-tram-line-4-plan.pdf#p1"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7820.71,
+      "prompt_tokens": 797,
+      "completion_tokens": 85,
+      "cost_usd": null,
+      "judge_prompt_tokens": 700,
+      "judge_completion_tokens": 317,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "tr-04",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The tram project will plant 900 new trees along the route, use grass‑track on 4 kilometres of the line to cut noise and rain‑water runoff, and operate all trams on renewable electricity[1].",
+      "citations": [
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 1.0,
+      "latency_ms": 7059.3,
+      "prompt_tokens": 817,
+      "completion_tokens": 173,
+      "cost_usd": null,
+      "judge_prompt_tokens": 800,
+      "judge_completion_tokens": 461,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "tr-05",
+      "style": "paraphrase",
+      "answerable": true,
+      "answered": true,
+      "refusal_reason": null,
+      "answer": "The city expects line 4 to carry about 45,000 passengers on an average weekday. [1]",
+      "citations": [
+        "lakeside-tram-line-4-plan.pdf#p3"
+      ],
+      "citation_precision": 1.0,
+      "citation_recall": 1.0,
+      "faithfulness": 1.0,
+      "relevancy": 1.0,
+      "correctness": 0.5,
+      "latency_ms": 6816.99,
+      "prompt_tokens": 816,
+      "completion_tokens": 101,
+      "cost_usd": null,
+      "judge_prompt_tokens": 720,
+      "judge_completion_tokens": 456,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-01",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 7585.03,
+      "prompt_tokens": 878,
+      "completion_tokens": 113,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-02",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 3978.84,
+      "prompt_tokens": 862,
+      "completion_tokens": 82,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-03",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 5046.4,
+      "prompt_tokens": 788,
+      "completion_tokens": 93,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-04",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 9417.72,
+      "prompt_tokens": 866,
+      "completion_tokens": 96,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-05",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 2080.62,
+      "prompt_tokens": 841,
+      "completion_tokens": 116,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    },
+    {
+      "question_id": "un-06",
+      "style": "unanswerable",
+      "answerable": false,
+      "answered": false,
+      "refusal_reason": "model_declined",
+      "answer": "I don't know based on the provided documents.",
+      "citations": [],
+      "citation_precision": null,
+      "citation_recall": null,
+      "faithfulness": null,
+      "relevancy": null,
+      "correctness": null,
+      "latency_ms": 8801.68,
+      "prompt_tokens": 834,
+      "completion_tokens": 91,
+      "cost_usd": null,
+      "judge_prompt_tokens": 0,
+      "judge_completion_tokens": 0,
+      "judge_failures": 0
+    }
+  ]
+}
